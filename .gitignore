@@ -1,0 +1,28 @@
+# Secrets and local config
+.env
+*.env
+!.env.example
+.claude/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / frontend build
+node_modules/
+frontend/dist/
+
+# Logs and local run output
+*.log
+build/
+backend/server.log
+
+# Debug screenshot
+issue.png
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,867 @@
+{
+  "scenario": "bad_deploy_pool",
+  "ground_truth": {
+    "label": "Deploy reduced DB connection pool size",
+    "keywords": [
+      "pool",
+      "deploy",
+      "reduc|smaller|shrunk|lower|decreas"
+    ],
+    "expected_sources": [
+      "deploys"
+    ]
+  },
+  "planner": {
+    "app-logs": {
+      "fragment": null,
+      "planned_by": "fallback",
+      "note": "focused query failed, context only: Elasticsearch search failed: BadRequestError(400, 'x_content_parse_exception', '[bool] malformed query, expected [END_OBJECT] but found [FIELD_NAME]')"
+    },
+    "deploys": {
+      "fragment": null,
+      "planned_by": "fallback",
+      "note": "planner failed: Expecting value: line 1 column 113 (char 112)"
+    },
+    "metrics": {
+      "fragment": {
+        "collection": "service_metrics",
+        "match": {
+          "service": "checkout-api",
+          "metric": {
+            "$in": [
+              "error_rate",
+              "uptime"
+            ]
+          },
+          "value": {
+            "$gte": 0.95
+          }
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    }
+  },
+  "fetched": {
+    "app-logs": {
+      "records": 2432,
+      "truncated": false,
+      "query_used": "{\"index\": \"rca-eval-bad-deploy-pool\", \"query\": {\"bool\": {\"filter\": [{\"bool\": {\"filter\": [{\"match_phrase\": {\"service\": \"checkout-api\"}}]}}, {\"range\": {\"@timestamp\": {\"gte\": \"2026-03-10T11:00:00+00:00\", \"lte\": \"2026-03-10T12:20:00+00:00\"}}}], \"must_not\": [{\"terms\": {\"level\": [\"DEBUG\", \"INFO\", \"TRACE\", \"debug\", \"info\", \"trace\"]}}]}}, \"sort\": [{\"@timestamp\": {\"order\": \"desc\"}}], \"size\": 10000}"
+    },
+    "deploys": {
+      "records": 1,
+      "truncated": false,
+      "query_used": "{\"collection\": \"deploy_events\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"checkout-api\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    },
+    "metrics": {
+      "records": 324,
+      "truncated": false,
+      "query_used": "{\"context\": \"{\\\"collection\\\": \\\"service_metrics\\\", \\\"pipeline\\\": [{\\\"$match\\\": {\\\"$and\\\": [{\\\"service\\\": \\\"checkout-api\\\"}, {\\\"timestamp\\\": {\\\"$gte\\\": \\\"2026-03-10 11:00:00+00:00\\\", \\\"$lte\\\": \\\"2026-03-10 12:20:00+00:00\\\"}}]}}, {\\\"$sort\\\": {\\\"timestamp\\\": -1}}, {\\\"$limit\\\": 10001}]}\", \"focus\": \"{\\\"collection\\\": \\\"service_metrics\\\", \\\"pipeline\\\": [{\\\"$match\\\": {\\\"$and\\\": [{\\\"service\\\": \\\"checkout-api\\\", \\\"metric\\\": {\\\"$in\\\": [\\\"error_rate\\\", \\\"uptime\\\"]}, \\\"value\\\": {\\\"$gte\\\": 0.95}}, {\\\"timestamp\\\": {\\\"$gte\\\": \\\"2026-03-10 11:00:00+00:00\\\", \\\"$lte\\\": \\\"2026-03-10 12:20:00+00:00\\\"}}]}}, {\\\"$sort\\\": {\\\"timestamp\\\": -1}}, {\\\"$limit\\\": 10001}]}\"}"
+    }
+  },
+  "failures": {},
+  "correlator": {
+    "baseline_window": {
+      "start": "2026-03-10T11:00:00Z",
+      "end": "2026-03-10T12:00:00Z"
+    },
+    "incident_window": {
+      "start": "2026-03-10T12:00:00Z",
+      "end": "2026-03-10T12:20:00Z"
+    },
+    "zscore_threshold": 3.0,
+    "error_spikes": [
+      {
+        "source": "app-logs",
+        "onset": "2026-03-10T12:04:00Z",
+        "peak_at": "2026-03-10T12:06:00Z",
+        "peak_count": 160,
+        "baseline_mean": 0.05,
+        "baseline_std": 1.0,
+        "peak_zscore": 159.95,
+        "spike_buckets": 16
+      }
+    ],
+    "signatures": [
+      {
+        "signature": "hikaripool-<n> - connection is not available, request timed out after <n>ms",
+        "incident_count": 1440,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:04:02.660593Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#2421",
+          "app-logs#2420",
+          "app-logs#2419"
+        ]
+      },
+      {
+        "signature": "post /checkout <n> in <n>ms",
+        "incident_count": 980,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:06:00.352408Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#2241",
+          "app-logs#2240",
+          "app-logs#2237"
+        ]
+      },
+      {
+        "signature": "cache miss for session <n>",
+        "incident_count": 1,
+        "baseline_count": 3,
+        "novel": false,
+        "first_seen": "2026-03-10T12:00:32.615453Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#2422"
+        ]
+      }
+    ],
+    "metric_anomalies": [
+      {
+        "source": "metrics",
+        "metric": "db_pool_active",
+        "baseline_mean": 8.201,
+        "baseline_std": 0.799,
+        "peak_value": 4.57,
+        "peak_zscore": -4.55,
+        "first_anomalous_at": "2026-03-10T12:03:00Z",
+        "sample_record_ids": [
+          "metrics#70",
+          "metrics#14"
+        ]
+      },
+      {
+        "source": "metrics",
+        "metric": "db_pool_wait_ms",
+        "baseline_mean": 5.811,
+        "baseline_std": 1.28,
+        "peak_value": 34378.91,
+        "peak_zscore": 26847.84,
+        "first_anomalous_at": "2026-03-10T12:03:00Z",
+        "sample_record_ids": [
+          "metrics#71",
+          "metrics#15"
+        ]
+      },
+      {
+        "source": "metrics",
+        "metric": "http_p99_ms",
+        "baseline_mean": 119.609,
+        "baseline_std": 5.98,
+        "peak_value": 32164.65,
+        "peak_zscore": 5358.31,
+        "first_anomalous_at": "2026-03-10T12:04:00Z",
+        "sample_record_ids": [
+          "metrics#65",
+          "metrics#21"
+        ]
+      }
+    ],
+    "timeline": [
+      {
+        "timestamp": "2026-03-10T12:01:00Z",
+        "source": "deploys",
+        "kind": "change",
+        "description": "deploy: checkout-api v2.4.1 rolled out; changes: spring.datasource.hikari.maximum-pool-size 20 -> 5",
+        "record_ids": [
+          "deploys#0"
+        ],
+        "offset_seconds": -120.0,
+        "lead_seconds": 120.0,
+        "followed_by_anomaly": true,
+        "nearest_preceding_change": true
+      },
+      {
+        "timestamp": "2026-03-10T12:03:00Z",
+        "source": "metrics",
+        "kind": "metric_anomaly",
+        "description": "db_pool_active anomalous (peak 4.57, baseline 8.201, z=-4.55)",
+        "record_ids": [
+          "metrics#70",
+          "metrics#14"
+        ],
+        "offset_seconds": 0.0,
+        "lead_seconds": null,
+        "followed_by_anomaly": null,
+        "nearest_preceding_change": false
+      },
+      {
+        "timestamp": "2026-03-10T12:03:00Z",
+        "source": "metrics",
+        "kind": "metric_anomaly",
+        "description": "db_pool_wait_ms anomalous (peak 34378.9, baseline 5.811, z=26847.84)",
+        "record_ids": [
+          "metrics#71",
+          "metrics#15"
+        ],
+        "offset_seconds": 0.0,
+        "lead_seconds": null,
+        "followed_by_anomaly": null,
+        "nearest_preceding_change": false
+      },
+      {
+        "timestamp": "2026-03-10T12:04:00Z",
+        "source": "app-logs",
+        "kind": "error_spike_onset",
+        "description": "error rate spike (peak 160/min, z=159.95, baseline 0.05/min)",
+        "record_ids": [],
+        "offset_seconds": 60.0,
+        "lead_seconds": null,
+        "followed_by_anomaly": null,
+        "nearest_preceding_change": false
+      },
+      {
+        "timestamp": "2026-03-10T12:04:00Z",
+        "source": "metrics",
+        "kind": "metric_anomaly",
+        "description": "http_p99_ms anomalous (peak 32164.7, baseline 119.609, z=5358.31)",
+        "record_ids": [
+          "metrics#65",
+          "metrics#21"
+        ],
+        "offset_seconds": 60.0,
+        "lead_seconds": null,
+        "followed_by_anomaly": null,
+        "nearest_preceding_change": false
+      },
+      {
+        "timestamp": "2026-03-10T12:04:02.660593Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x1440: hikaripool-<n> - connection is not available, request timed out after <n>ms",
+        "record_ids": [
+          "app-logs#2421",
+          "app-logs#2420",
+          "app-logs#2419"
+        ],
+        "offset_seconds": 62.660593,
+        "lead_seconds": null,
+        "followed_by_anomaly": null,
+        "nearest_preceding_change": false
+      },
+      {
+        "timestamp": "2026-03-10T12:06:00.352408Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x980: post /checkout <n> in <n>ms",
+        "record_ids": [
+          "app-logs#2241",
+          "app-logs#2240",
+          "app-logs#2237"
+        ],
+        "offset_seconds": 180.352408,
+        "lead_seconds": null,
+        "followed_by_anomaly": null,
+        "nearest_preceding_change": false
+      }
+    ],
+    "first_anomaly_at": "2026-03-10T12:03:00Z",
+    "activity": {
+      "metrics": [
+        {
+          "timestamp": "2026-03-10T11:00:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:01:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:02:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:03:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:04:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:05:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:06:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:07:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:08:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:09:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:10:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:11:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:12:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:13:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:14:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:15:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:16:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:17:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:18:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:19:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:20:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:21:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:22:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:23:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:24:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:25:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:26:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:27:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:28:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:29:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:30:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:31:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:32:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:33:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:34:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:35:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:36:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:37:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:38:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:39:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:40:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:41:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:42:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:43:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:44:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:45:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:46:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:47:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:48:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:49:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:50:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:51:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:52:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:53:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:54:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:55:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:56:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:57:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:58:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:59:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:00:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:01:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:02:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:03:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 4,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 4,
+          "errors": 0
+        }
+      ],
+      "app-logs": [
+        {
+          "timestamp": "2026-03-10T11:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:12:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:20:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:24:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:36:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:40:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:48:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 90,
+          "errors": 90
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 90,
+          "errors": 90
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 161,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 160,
+          "errors": 160
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 1,
+          "errors": 1
+        }
+      ],
+      "deploys": [
+        {
+          "timestamp": "2026-03-10T12:01:00Z",
+          "total": 1,
+          "errors": 0
+        }
+      ]
+    }
+  },
+  "ranker_input": "{\n \"incident\": {\n  \"service\": \"checkout-api\",\n  \"symptom\": \"checkout-api is returning HTTP 500/503 errors to customers\",\n  \"window\": \"12:00:00 to 12:20:00 UTC\"\n },\n \"first_anomaly_at\": \"12:03:00\",\n \"error_spikes\": [\n  {\n   \"source\": \"app-logs\",\n   \"onset\": \"12:04:00\",\n   \"peak_per_min\": 160,\n   \"baseline_per_min\": 0.05,\n   \"zscore\": 159.95\n  }\n ],\n \"error_signatures\": [\n  {\n   \"signature\": \"hikaripool-<n> - connection is not available, request timed out after <n>ms\",\n   \"incident_count\": 1440,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:04:02\",\n   \"evidence_ids\": [\n    \"app-logs#2421\",\n    \"app-logs#2420\",\n    \"app-logs#2419\"\n   ]\n  },\n  {\n   \"signature\": \"post /checkout <n> in <n>ms\",\n   \"incident_count\": 980,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:06:00\",\n   \"evidence_ids\": [\n    \"app-logs#2241\",\n    \"app-logs#2240\",\n    \"app-logs#2237\"\n   ]\n  },\n  {\n   \"signature\": \"cache miss for session <n>\",\n   \"incident_count\": 1,\n   \"baseline_count\": 3,\n   \"novel\": false,\n   \"first_seen\": \"12:00:32\",\n   \"evidence_ids\": [\n    \"app-logs#2422\"\n   ]\n  }\n ],\n \"metric_anomalies\": [\n  {\n   \"source\": \"metrics\",\n   \"metric\": \"db_pool_active\",\n   \"baseline_mean\": 8.201,\n   \"peak\": 4.57,\n   \"zscore\": -4.55,\n   \"first_anomalous_at\": \"12:03:00\",\n   \"evidence_ids\": [\n    \"metrics#70\",\n    \"metrics#14\"\n   ]\n  },\n  {\n   \"source\": \"metrics\",\n   \"metric\": \"db_pool_wait_ms\",\n   \"baseline_mean\": 5.811,\n   \"peak\": 34378.91,\n   \"zscore\": 26847.84,\n   \"first_anomalous_at\": \"12:03:00\",\n   \"evidence_ids\": [\n    \"metrics#71\",\n    \"metrics#15\"\n   ]\n  },\n  {\n   \"source\": \"metrics\",\n   \"metric\": \"http_p99_ms\",\n   \"baseline_mean\": 119.609,\n   \"peak\": 32164.65,\n   \"zscore\": 5358.31,\n   \"first_anomalous_at\": \"12:04:00\",\n   \"evidence_ids\": [\n    \"metrics#65\",\n    \"metrics#21\"\n   ]\n  }\n ],\n \"timeline\": [\n  {\n   \"time\": \"12:01:00\",\n   \"offset_seconds\": -120.0,\n   \"source\": \"deploys\",\n   \"kind\": \"change\",\n   \"what\": \"deploy: checkout-api v2.4.1 rolled out; changes: spring.datasource.hikari.maximum-pool-size 20 -> 5\",\n   \"record_ids\": [\n    \"deploys#0\"\n   ],\n   \"lead_seconds\": 120.0,\n   \"followed_by_anomaly\": true,\n   \"nearest_preceding_change\": true\n  },\n  {\n   \"time\": \"12:03:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"metrics\",\n   \"kind\": \"metric_anomaly\",\n   \"what\": \"db_pool_active anomalous (peak 4.57, baseline 8.201, z=-4.55)\",\n   \"record_ids\": [\n    \"metrics#70\",\n    \"metrics#14\"\n   ]\n  },\n  {\n   \"time\": \"12:03:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"metrics\",\n   \"kind\": \"metric_anomaly\",\n   \"what\": \"db_pool_wait_ms anomalous (peak 34378.9, baseline 5.811, z=26847.84)\",\n   \"record_ids\": [\n    \"metrics#71\",\n    \"metrics#15\"\n   ]\n  },\n  {\n   \"time\": \"12:04:00\",\n   \"offset_seconds\": 60.0,\n   \"source\": \"app-logs\",\n   \"kind\": \"error_spike_onset\",\n   \"what\": \"error rate spike (peak 160/min, z=159.95, baseline 0.05/min)\",\n   \"record_ids\": []\n  },\n  {\n   \"time\": \"12:04:00\",\n   \"offset_seconds\": 60.0,\n   \"source\": \"metrics\",\n   \"kind\": \"metric_anomaly\",\n   \"what\": \"http_p99_ms anomalous (peak 32164.7, baseline 119.609, z=5358.31)\",\n   \"record_ids\": [\n    \"metrics#65\",\n    \"metrics#21\"\n   ]\n  },\n  {\n   \"time\": \"12:04:02\",\n   \"offset_seconds\": 62.660593,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x1440: hikaripool-<n> - connection is not available, request timed out after <n>ms\",\n   \"record_ids\": [\n    \"app-logs#2421\",\n    \"app-logs#2420\",\n    \"app-logs#2419\"\n   ]\n  },\n  {\n   \"time\": \"12:06:00\",\n   \"offset_seconds\": 180.352408,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x980: post /checkout <n> in <n>ms\",\n   \"record_ids\": [\n    \"app-logs#2241\",\n    \"app-logs#2240\",\n    \"app-logs#2237\"\n   ]\n  }\n ]\n}",
+  "raw_output": "{\n \"leading_candidate\": {\n  \"what\": \"deploy: checkout-api v2.4.1 rolled out; changes: spring.datasource.hikari.maximum-pool-size 20 -> 5\",\n  \"verdict\": \"accepted\",\n  \"reason\": \"The change occurred 120 seconds before the first metric anomaly and was followed by an error spike.\"\n },\n \"hypotheses\": [\n  {\n   \"title\": \"Database connection pool size reduction\",\n   \"description\": \"The reduction in database connection pool size from 20 to 5 likely caused a shortage of available connections, leading to timeouts and errors.\",\n   \"confidence\": 0.9,\n   \"supporting_evidence_ids\": [\n    \"deploys#0\",\n    \"metrics#70\",\n    \"metrics#14\",\n    \"app-logs#2421\"\n   ]\n  },\n  {\n   \"title\": \"Increased HTTP request latency and errors\",\n   \"description\": \"The increase in db_pool_wait_ms and the new error signatures related to connection timeouts indicate that requests are timing out due to insufficient database connections.\",\n   \"confidence\": 0.85,\n   \"supporting_evidence_ids\": [\n    \"metrics#71\",\n    \"app-logs#2421\"\n   ]\n  },\n  {\n   \"title\": \"Cache miss errors\",\n   \"description\": \"The cache miss error, while present before the incident, does not seem to be directly related to the primary issue of insufficient database connections.\",\n   \"confidence\": 0.3,\n   \"supporting_evidence_ids\": [\n    \"app-logs#2422\"\n   ]\n  },\n  {\n   \"title\": \"HTTP request p99 latency spike\",\n   \"description\": \"The significant increase in HTTP p99 latency suggests that requests are taking much longer to complete, likely due to the database connection issues.\",\n   \"confidence\": 0.75,\n   \"supporting_evidence_ids\": [\n    \"metrics#65\"\n   ]\n  }\n ]\n}",
+  "parsed_hypotheses": [
+    {
+      "rank": 1,
+      "title": "Database connection pool size reduction",
+      "description": "The reduction in database connection pool size from 20 to 5 likely caused a shortage of available connections, leading to timeouts and errors.",
+      "confidence": 0.9,
+      "supporting_evidence_ids": [
+        "deploys#0",
+        "metrics#70",
+        "metrics#14",
+        "app-logs#2421"
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "Increased HTTP request latency and errors",
+      "description": "The increase in db_pool_wait_ms and the new error signatures related to connection timeouts indicate that requests are timing out due to insufficient database connections.",
+      "confidence": 0.85,
+      "supporting_evidence_ids": [
+        "metrics#71",
+        "app-logs#2421"
+      ]
+    },
+    {
+      "rank": 3,
+      "title": "HTTP request p99 latency spike",
+      "description": "The significant increase in HTTP p99 latency suggests that requests are taking much longer to complete, likely due to the database connection issues.",
+      "confidence": 0.75,
+      "supporting_evidence_ids": [
+        "metrics#65"
+      ]
+    },
+    {
+      "rank": 4,
+      "title": "Cache miss errors",
+      "description": "The cache miss error, while present before the incident, does not seem to be directly related to the primary issue of insufficient database connections.",
+      "confidence": 0.3,
+      "supporting_evidence_ids": [
+        "app-logs#2422"
+      ]
+    }
+  ],
+  "rank_of_correct": null,
+  "visibility": {
+    "topic_keyword": "pool",
+    "topic_in_fetched_expected_sources": true,
+    "topic_in_ranker_input": true,
+    "keywords_missing_from_ranker_input": [
+      "reduc|smaller|shrunk|lower|decreas"
+    ]
+  }
+}

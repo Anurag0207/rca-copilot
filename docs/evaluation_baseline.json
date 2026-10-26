@@ -1,0 +1,2670 @@
+{
+  "meta": {
+    "date": "2026-10-26",
+    "model": "qwen2.5:7b",
+    "hardware": "Windows-10-10.0.26200-SP0; 22 logical CPUs; Intel(R) Core(TM) Ultra 7 155H, 15.4 GB RAM; GPU: NVIDIA GeForce RTX 4060 Laptop GPU, 8188 MiB. Elasticsearch 8.13.2 and MongoDB 7 run in Docker on the same machine.",
+    "command": "MONGODB_URI=mongodb://localhost:27018 python scripts/evaluate.py (MongoDB on port 27018 because 27017 was already in use; all other settings are defaults)",
+    "runs_per_scenario": 5,
+    "scale": 100000,
+    "sources_note": "Elasticsearch (logs), MongoDB (change events and metrics), real instances; Ollama LLM",
+    "notes": [
+      "Scenarios are synthetic and were authored together with the system; ground-truth keywords were fixed before the first run and not changed afterwards.",
+      "A run counts as correct only if a hypothesis contains every ground-truth keyword (substring, case-insensitive; '|' = alternatives) AND cites at least one evidence id from an expected source. This checks wording and citation, not the quality of the reasoning. The lenient figures (at most one keyword missing, same source rule) were defined before the full run and are secondary; strict accuracy is the headline number.",
+      "All 5 runs of a scenario analyse identical data (fixed seed); the only variation between runs is LLM sampling (temperature 0.1).",
+      "Metrics are stored in MongoDB with the Hive row shape; no Hive cluster was available, so the Hive connector is not exercised by this evaluation.",
+      "The Elasticsearch connector excludes info/debug/trace logs server-side, so 'records collected' counts only warn/error-level logs plus change and metric rows; 'events in store' counts everything seeded. Row cap per source: 10,000.",
+      "Compression = records collected per record cited by any hypothesis; it measures how far the pipeline narrows the data, not correctness."
+    ]
+  },
+  "overall": {
+    "runs": 50,
+    "top1_accuracy": 0.56,
+    "top3_accuracy": 0.72,
+    "top1_lenient_accuracy": 0.72,
+    "top3_lenient_accuracy": 0.9,
+    "mean_records_collected": 3184.0,
+    "mean_records_cited": 8.3,
+    "compression_ratio": 383.6,
+    "latency_ms_p50": 20226,
+    "latency_ms_p95": 38598,
+    "stage_median_ms": {
+      "collect": 4391,
+      "correlate": 30,
+      "rank": 15726
+    },
+    "runs_with_failed_source": 0,
+    "runs_without_hypotheses": 0,
+    "mean_events_in_store": 103947.8,
+    "store_to_cited_ratio": 12523.8
+  },
+  "scenarios": {
+    "bad_deploy_pool": {
+      "runs": 5,
+      "top1_accuracy": 0.8,
+      "top3_accuracy": 0.8,
+      "top1_lenient_accuracy": 1.0,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 2562.6,
+      "mean_records_cited": 9.4,
+      "compression_ratio": 272.6,
+      "latency_ms_p50": 20875,
+      "latency_ms_p95": 30922,
+      "stage_median_ms": {
+        "collect": 5061,
+        "correlate": 47,
+        "rank": 15813
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "checkout-api",
+      "ground_truth": "Deploy reduced DB connection pool size",
+      "keywords": [
+        "pool",
+        "deploy",
+        "reduc|smaller|shrunk|lower|decreas"
+      ],
+      "expected_sources": [
+        "deploys"
+      ],
+      "events_in_store": 102872,
+      "seed_seconds": 8.3,
+      "failures": [
+        {
+          "run": 5,
+          "reason": "top hypothesis 'HikariCP Pool Size Reduction Caused Connection Issues' missing keywords ['deploy']"
+        }
+      ],
+      "speedup": {
+        "io_only": {
+          "sequential": 110,
+          "parallel": 108
+        },
+        "with_llm_planner": {
+          "sequential": 7905,
+          "parallel": 6030
+        }
+      }
+    },
+    "cert_expiry": {
+      "runs": 5,
+      "top1_accuracy": 0.4,
+      "top3_accuracy": 0.8,
+      "top1_lenient_accuracy": 1.0,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 6134.0,
+      "mean_records_cited": 12.0,
+      "compression_ratio": 511.2,
+      "latency_ms_p50": 21218,
+      "latency_ms_p95": 26762,
+      "stage_median_ms": {
+        "collect": 4391,
+        "correlate": 125,
+        "rank": 16750
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "auth-api",
+      "ground_truth": "Expired TLS certificate",
+      "keywords": [
+        "certificate",
+        "expir",
+        "tls|x509|handshake"
+      ],
+      "expected_sources": [
+        "app-logs"
+      ],
+      "events_in_store": 106378,
+      "seed_seconds": 7.0,
+      "failures": [
+        {
+          "run": 2,
+          "reason": "top hypothesis 'Certificate Expiry Error' missing keywords ['tls|x509|handshake']"
+        },
+        {
+          "run": 3,
+          "reason": "correct cause ranked #2; #1 was 'Certificate Expiry Issue'"
+        },
+        {
+          "run": 4,
+          "reason": "correct cause ranked #2; #1 was 'Certificate Expiry Error'"
+        }
+      ],
+      "speedup": {
+        "io_only": {
+          "sequential": 235,
+          "parallel": 139
+        },
+        "with_llm_planner": {
+          "sequential": 5375,
+          "parallel": 4422
+        }
+      }
+    },
+    "config_timeout": {
+      "runs": 5,
+      "top1_accuracy": 1.0,
+      "top3_accuracy": 1.0,
+      "top1_lenient_accuracy": 1.0,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 2764.6,
+      "mean_records_cited": 6.8,
+      "compression_ratio": 406.6,
+      "latency_ms_p50": 12297,
+      "latency_ms_p95": 20437,
+      "stage_median_ms": {
+        "collect": 4391,
+        "correlate": 47,
+        "rank": 7905
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "payments-api",
+      "ground_truth": "Config change shortened the fraud-service client timeout",
+      "keywords": [
+        "timeout",
+        "config",
+        "fraud|downstream|client|500"
+      ],
+      "expected_sources": [
+        "deploys"
+      ],
+      "events_in_store": 103071,
+      "seed_seconds": 6.6,
+      "failures": [],
+      "speedup": {
+        "io_only": {
+          "sequential": 108,
+          "parallel": 77
+        },
+        "with_llm_planner": {
+          "sequential": 6438,
+          "parallel": 4483
+        }
+      }
+    },
+    "dependency_outage": {
+      "runs": 5,
+      "top1_accuracy": 0.4,
+      "top3_accuracy": 0.4,
+      "top1_lenient_accuracy": 0.8,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 1011.6,
+      "mean_records_cited": 3.6,
+      "compression_ratio": 281.0,
+      "latency_ms_p50": 17437,
+      "latency_ms_p95": 22788,
+      "stage_median_ms": {
+        "collect": 4375,
+        "correlate": 14,
+        "rank": 11655
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "orders-api",
+      "ground_truth": "inventory-service dependency outage",
+      "keywords": [
+        "inventory",
+        "unavailable|down|outage|refused|unreachable|failure",
+        "dependency|downstream|service"
+      ],
+      "expected_sources": [
+        "app-logs",
+        "metrics"
+      ],
+      "events_in_store": 104955,
+      "seed_seconds": 6.6,
+      "failures": [
+        {
+          "run": 1,
+          "reason": "top hypothesis 'Inventory Unavailability Error Introduced' missing keywords ['unavailable|down|outage|refused|unreachable|failure', 'dependency|downstream|service']"
+        },
+        {
+          "run": 3,
+          "reason": "top hypothesis 'Inventory Unavailability Error Introduced' missing keywords ['dependency|downstream|service']"
+        },
+        {
+          "run": 5,
+          "reason": "top hypothesis 'New error signature in app logs' missing keywords ['dependency|downstream|service']"
+        }
+      ],
+      "speedup": {
+        "io_only": {
+          "sequential": 108,
+          "parallel": 110
+        },
+        "with_llm_planner": {
+          "sequential": 5327,
+          "parallel": 4188
+        }
+      }
+    },
+    "disk_full": {
+      "runs": 5,
+      "top1_accuracy": 1.0,
+      "top3_accuracy": 1.0,
+      "top1_lenient_accuracy": 1.0,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 3203.0,
+      "mean_records_cited": 13.0,
+      "compression_ratio": 246.4,
+      "latency_ms_p50": 29266,
+      "latency_ms_p95": 41406,
+      "stage_median_ms": {
+        "collect": 4485,
+        "correlate": 30,
+        "rank": 24733
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "ingest-api",
+      "ground_truth": "Disk full on the ingest volume",
+      "keywords": [
+        "disk",
+        "full|space|exhaust|capacity|100",
+        "write|storage|volume|spool|ingest"
+      ],
+      "expected_sources": [
+        "app-logs",
+        "metrics"
+      ],
+      "events_in_store": 103414,
+      "seed_seconds": 6.6,
+      "failures": [],
+      "speedup": {
+        "io_only": {
+          "sequential": 94,
+          "parallel": 63
+        },
+        "with_llm_planner": {
+          "sequential": 5842,
+          "parallel": 4438
+        }
+      }
+    },
+    "dropped_index": {
+      "runs": 5,
+      "top1_accuracy": 0.0,
+      "top3_accuracy": 1.0,
+      "top1_lenient_accuracy": 0.0,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 3593.0,
+      "mean_records_cited": 8.4,
+      "compression_ratio": 427.7,
+      "latency_ms_p50": 19297,
+      "latency_ms_p95": 191000,
+      "stage_median_ms": {
+        "collect": 3844,
+        "correlate": 16,
+        "rank": 15639
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "reports-api",
+      "ground_truth": "Migration dropped a database index",
+      "keywords": [
+        "index",
+        "drop|migration|remov|missing",
+        "slow|query|scan|database|db"
+      ],
+      "expected_sources": [
+        "deploys"
+      ],
+      "events_in_store": 104036,
+      "seed_seconds": 6.5,
+      "failures": [
+        {
+          "run": 1,
+          "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+        },
+        {
+          "run": 2,
+          "reason": "correct cause ranked #2; #1 was 'Query Timeout Due to Increased Cache TTL'"
+        },
+        {
+          "run": 3,
+          "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+        },
+        {
+          "run": 4,
+          "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+        },
+        {
+          "run": 5,
+          "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+        }
+      ],
+      "speedup": {
+        "io_only": {
+          "sequential": 47,
+          "parallel": 108
+        },
+        "with_llm_planner": {
+          "sequential": 4547,
+          "parallel": 3047
+        }
+      }
+    },
+    "memory_leak_release": {
+      "runs": 5,
+      "top1_accuracy": 1.0,
+      "top3_accuracy": 1.0,
+      "top1_lenient_accuracy": 1.0,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 2460.0,
+      "mean_records_cited": 12.4,
+      "compression_ratio": 198.4,
+      "latency_ms_p50": 24641,
+      "latency_ms_p95": 33803,
+      "stage_median_ms": {
+        "collect": 4203,
+        "correlate": 15,
+        "rank": 20796
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "search-api",
+      "ground_truth": "Memory leak introduced by release v3.2.0",
+      "keywords": [
+        "memory|heap|oom",
+        "leak|unbounded|growth|grow|increas",
+        "deploy|release|v3.2.0|cache"
+      ],
+      "expected_sources": [
+        "deploys",
+        "metrics"
+      ],
+      "events_in_store": 102586,
+      "seed_seconds": 4.0,
+      "failures": [],
+      "speedup": {
+        "io_only": {
+          "sequential": 78,
+          "parallel": 63
+        },
+        "with_llm_planner": {
+          "sequential": 6047,
+          "parallel": 4077
+        }
+      }
+    },
+    "traffic_surge": {
+      "runs": 5,
+      "top1_accuracy": 0.0,
+      "top3_accuracy": 0.2,
+      "top1_lenient_accuracy": 0.4,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 3843.6,
+      "mean_records_cited": 5.4,
+      "compression_ratio": 711.8,
+      "latency_ms_p50": 15922,
+      "latency_ms_p95": 16418,
+      "stage_median_ms": {
+        "collect": 4657,
+        "correlate": 30,
+        "rank": 11266
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": false,
+      "service": "gateway-api",
+      "ground_truth": "Traffic surge saturating gateway capacity",
+      "keywords": [
+        "traffic|load|request rate|requests",
+        "spike|surge|increase|sudden|flood|grow",
+        "cpu|saturat|capacity|overload"
+      ],
+      "expected_sources": [
+        "metrics",
+        "app-logs"
+      ],
+      "events_in_store": 105184,
+      "seed_seconds": 4.7,
+      "failures": [
+        {
+          "run": 1,
+          "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['traffic|load|request rate|requests', 'spike|surge|increase|sudden|flood|grow']"
+        },
+        {
+          "run": 2,
+          "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['spike|surge|increase|sudden|flood|grow']"
+        },
+        {
+          "run": 3,
+          "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['traffic|load|request rate|requests', 'spike|surge|increase|sudden|flood|grow']"
+        },
+        {
+          "run": 4,
+          "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['traffic|load|request rate|requests', 'spike|surge|increase|sudden|flood|grow']"
+        },
+        {
+          "run": 5,
+          "reason": "correct cause ranked #2; #1 was 'Service overload due to new error signature'"
+        }
+      ],
+      "speedup": {
+        "io_only": {
+          "sequential": 78,
+          "parallel": 92
+        },
+        "with_llm_planner": {
+          "sequential": 6405,
+          "parallel": 4484
+        }
+      }
+    },
+    "cpu_throttling_metrics_only": {
+      "runs": 5,
+      "top1_accuracy": 0.0,
+      "top3_accuracy": 0.0,
+      "top1_lenient_accuracy": 0.0,
+      "top3_lenient_accuracy": 0.0,
+      "mean_records_collected": 3285.0,
+      "mean_records_cited": 3.6,
+      "compression_ratio": 912.5,
+      "latency_ms_p50": 12266,
+      "latency_ms_p95": 18256,
+      "stage_median_ms": {
+        "collect": 4094,
+        "correlate": 15,
+        "rank": 8234
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": true,
+      "service": "recs-api",
+      "ground_truth": "CPU throttling after the container CPU limit was reduced",
+      "keywords": [
+        "cpu",
+        "throttl|limit",
+        "reduc|lower|decreas|quota|container|cut"
+      ],
+      "expected_sources": [
+        "metrics"
+      ],
+      "events_in_store": 103851,
+      "seed_seconds": 4.2,
+      "failures": [
+        {
+          "run": 1,
+          "reason": "top hypothesis 'Cache Misses Causing Timeout' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+        },
+        {
+          "run": 2,
+          "reason": "top hypothesis 'Cache Misses Leading to Timeout' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+        },
+        {
+          "run": 3,
+          "reason": "top hypothesis 'Cache Misses Causing Timeout' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+        },
+        {
+          "run": 4,
+          "reason": "top hypothesis 'Backend Overload' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+        },
+        {
+          "run": 5,
+          "reason": "top hypothesis 'Increased Load on Backend' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+        }
+      ],
+      "speedup": {
+        "io_only": {
+          "sequential": 125,
+          "parallel": 47
+        },
+        "with_llm_planner": {
+          "sequential": 5921,
+          "parallel": 4203
+        }
+      }
+    },
+    "red_herring_cache": {
+      "runs": 5,
+      "top1_accuracy": 1.0,
+      "top3_accuracy": 1.0,
+      "top1_lenient_accuracy": 1.0,
+      "top3_lenient_accuracy": 1.0,
+      "mean_records_collected": 2983.0,
+      "mean_records_cited": 8.4,
+      "compression_ratio": 355.1,
+      "latency_ms_p50": 21203,
+      "latency_ms_p95": 22000,
+      "stage_median_ms": {
+        "collect": 4186,
+        "correlate": 16,
+        "rank": 16844
+      },
+      "runs_with_failed_source": 0,
+      "runs_without_hypotheses": 0,
+      "hard": true,
+      "service": "profile-api",
+      "ground_truth": "Redis memory exhaustion causing key evictions",
+      "keywords": [
+        "redis|cache",
+        "memory|evict",
+        "exhaust|full|evict|limit|saturat|maxmemory"
+      ],
+      "expected_sources": [
+        "metrics"
+      ],
+      "events_in_store": 103131,
+      "seed_seconds": 4.5,
+      "failures": [],
+      "speedup": {
+        "io_only": {
+          "sequential": 47,
+          "parallel": 61
+        },
+        "with_llm_planner": {
+          "sequential": 5266,
+          "parallel": 3983
+        }
+      }
+    }
+  },
+  "speedup": {
+    "modes": {
+      "io_only": {
+        "sequential_ms_median": 101.0,
+        "parallel_ms_median": 84.5,
+        "speedup_median": 1.1283068783068784,
+        "samples": 10
+      },
+      "with_llm_planner": {
+        "sequential_ms_median": 5881.5,
+        "parallel_ms_median": 4312.5,
+        "speedup_median": 1.365437328250107,
+        "samples": 10
+      }
+    },
+    "note": "Each sample is one scenario's median (io_only: median of several timed runs; with_llm_planner: one timed run per mode). 'io_only' disables the LLM planner to isolate connector I/O. 'with_llm_planner' includes three query-planning LLM calls against one local Ollama instance, so its parallel gain depends on that instance's concurrency."
+  },
+  "raw_runs": {
+    "bad_deploy_pool": [
+      {
+        "run": 1,
+        "wall_ms": 30359,
+        "timings_ms": {
+          "collect": 5092,
+          "correlate": 47,
+          "rank": 25219
+        },
+        "records_collected": 2757,
+        "records_cited": 12,
+        "events_in_store": 102872,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Database Connection Pool Size Reduction",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Database Performance Degradation",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Increased API Request Load",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 2,
+        "wall_ms": 18890,
+        "timings_ms": {
+          "collect": 5375,
+          "correlate": 77,
+          "rank": 13436
+        },
+        "records_collected": 2433,
+        "records_cited": 7,
+        "events_in_store": 102872,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Database Connection Pool Size Reduction",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Increased Load on Checkout API",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 3,
+        "wall_ms": 31063,
+        "timings_ms": {
+          "collect": 4938,
+          "correlate": 61,
+          "rank": 26063
+        },
+        "records_collected": 2757,
+        "records_cited": 13,
+        "events_in_store": 102872,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Database Connection Pool Size Reduction",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "New Error Signatures Indicating Resource Exhaustion",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Database Performance Degradation",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 4,
+        "wall_ms": 17828,
+        "timings_ms": {
+          "collect": 5061,
+          "correlate": 47,
+          "rank": 12719
+        },
+        "records_collected": 2433,
+        "records_cited": 7,
+        "events_in_store": 102872,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Database Connection Pool Size Reduction Caused Out-of-Pool Errors",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "New API Endpoint Caused Increased Load and Errors",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 5,
+        "wall_ms": 20875,
+        "timings_ms": {
+          "collect": 5030,
+          "correlate": 30,
+          "rank": 15813
+        },
+        "records_collected": 2433,
+        "records_cited": 8,
+        "events_in_store": 102872,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "HikariCP Pool Size Reduction Caused Connection Issues",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Timeouts Due to Increased Load on Database",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Increased Load on API Due to New Endpoint",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'HikariCP Pool Size Reduction Caused Connection Issues' missing keywords ['deploy']"
+      }
+    ],
+    "cert_expiry": [
+      {
+        "run": 1,
+        "wall_ms": 28062,
+        "timings_ms": {
+          "collect": 4733,
+          "correlate": 266,
+          "rank": 23061
+        },
+        "records_collected": 6134,
+        "records_cited": 12,
+        "events_in_store": 106378,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Certificate Expiry Error",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Error Spike Leading to Overload",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Identity Provider Unreachable",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 2,
+        "wall_ms": 21563,
+        "timings_ms": {
+          "collect": 4391,
+          "correlate": 141,
+          "rank": 17030
+        },
+        "records_collected": 6134,
+        "records_cited": 12,
+        "events_in_store": 106378,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Certificate Expiry Error",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "TLS Handshake Failure",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Identity Provider Unreachable",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Certificate Expiry Error' missing keywords ['tls|x509|handshake']"
+      },
+      {
+        "run": 3,
+        "wall_ms": 19219,
+        "timings_ms": {
+          "collect": 4139,
+          "correlate": 125,
+          "rank": 14954
+        },
+        "records_collected": 6134,
+        "records_cited": 12,
+        "events_in_store": 106378,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Certificate Expiry Issue",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "TLS Handshake Failure",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Identity Provider Unreachable",
+            "confidence": 0.4
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Certificate Expiry Issue'"
+      },
+      {
+        "run": 4,
+        "wall_ms": 19578,
+        "timings_ms": {
+          "collect": 4625,
+          "correlate": 125,
+          "rank": 14827
+        },
+        "records_collected": 6134,
+        "records_cited": 12,
+        "events_in_store": 106378,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Certificate Expiry Error",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "TLS Handshake Errors",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Identity Provider Unreachable",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Certificate Expiry Error'"
+      },
+      {
+        "run": 5,
+        "wall_ms": 21218,
+        "timings_ms": {
+          "collect": 4342,
+          "correlate": 125,
+          "rank": 16750
+        },
+        "records_collected": 6134,
+        "records_cited": 12,
+        "events_in_store": 106378,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Certificate Expiry Error",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Identity Provider Unreachable",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Error Spike in Authentication Requests",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      }
+    ],
+    "config_timeout": [
+      {
+        "run": 1,
+        "wall_ms": 22265,
+        "timings_ms": {
+          "collect": 4405,
+          "correlate": 47,
+          "rank": 17811
+        },
+        "records_collected": 2959,
+        "records_cited": 13,
+        "events_in_store": 103071,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Timeout configuration change",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "HTTP request latency increase",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "New fraud check failure",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 2,
+        "wall_ms": 12047,
+        "timings_ms": {
+          "collect": 4094,
+          "correlate": 47,
+          "rank": 7905
+        },
+        "records_collected": 2716,
+        "records_cited": 5,
+        "events_in_store": 103071,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Timeout configuration change in fraud-service client",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Increased logging level change in payments-api",
+            "confidence": 0.3
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 3,
+        "wall_ms": 12297,
+        "timings_ms": {
+          "collect": 4391,
+          "correlate": 47,
+          "rank": 7842
+        },
+        "records_collected": 2716,
+        "records_cited": 5,
+        "events_in_store": 103071,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Timeout change in config",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Logging level change",
+            "confidence": 0.2
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 4,
+        "wall_ms": 13125,
+        "timings_ms": {
+          "collect": 4280,
+          "correlate": 47,
+          "rank": 8797
+        },
+        "records_collected": 2716,
+        "records_cited": 5,
+        "events_in_store": 103071,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Timeout configuration change in fraud-service client",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Increased logging level change in payments-api",
+            "confidence": 0.2
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 5,
+        "wall_ms": 11828,
+        "timings_ms": {
+          "collect": 4733,
+          "correlate": 47,
+          "rank": 7047
+        },
+        "records_collected": 2716,
+        "records_cited": 6,
+        "events_in_store": 103071,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Timeout Configuration Change",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Logging Level Change",
+            "confidence": 0.3
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      }
+    ],
+    "dependency_outage": [
+      {
+        "run": 1,
+        "wall_ms": 17437,
+        "timings_ms": {
+          "collect": 5766,
+          "correlate": 14,
+          "rank": 11655
+        },
+        "records_collected": 963,
+        "records_cited": 3,
+        "events_in_store": 104955,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Inventory Unavailability Error Introduced",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Database Query Failure",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [
+          "hypothesis #3 rejected: invalid schema (List should have at least 1 item after validation, not 0)",
+          "hypothesis #4 rejected: invalid schema (List should have at least 1 item after validation, not 0)"
+        ],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Inventory Unavailability Error Introduced' missing keywords ['unavailable|down|outage|refused|unreachable|failure', 'dependency|downstream|service']"
+      },
+      {
+        "run": 2,
+        "wall_ms": 23829,
+        "timings_ms": {
+          "collect": 4375,
+          "correlate": 32,
+          "rank": 19422
+        },
+        "records_collected": 1206,
+        "records_cited": 6,
+        "events_in_store": 104955,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Inventory service failure",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Database contention or failure",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Network or API gateway issue",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 3,
+        "wall_ms": 18625,
+        "timings_ms": {
+          "collect": 4250,
+          "correlate": 14,
+          "rank": 14360
+        },
+        "records_collected": 963,
+        "records_cited": 3,
+        "events_in_store": 104955,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Inventory Unavailability Error Introduced",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Database Query Failure",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Network Latency Issue",
+            "confidence": 0.4
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Inventory Unavailability Error Introduced' missing keywords ['dependency|downstream|service']"
+      },
+      {
+        "run": 4,
+        "wall_ms": 12593,
+        "timings_ms": {
+          "collect": 4295,
+          "correlate": 16,
+          "rank": 8280
+        },
+        "records_collected": 963,
+        "records_cited": 3,
+        "events_in_store": 104955,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "New error signature introduced",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Error rate spike due to increased load or misconfiguration",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 5,
+        "wall_ms": 12719,
+        "timings_ms": {
+          "collect": 4407,
+          "correlate": 14,
+          "rank": 8297
+        },
+        "records_collected": 963,
+        "records_cited": 3,
+        "events_in_store": 104955,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "New error signature in app logs",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Error rate spike in app logs",
+            "confidence": 0.7
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'New error signature in app logs' missing keywords ['dependency|downstream|service']"
+      }
+    ],
+    "disk_full": [
+      {
+        "run": 1,
+        "wall_ms": 23734,
+        "timings_ms": {
+          "collect": 5108,
+          "correlate": 47,
+          "rank": 18563
+        },
+        "records_collected": 3203,
+        "records_cited": 11,
+        "events_in_store": 103414,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Disk Space Exhaustion",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Write Errors Due to Storage Issues",
+            "confidence": 0.75
+          },
+          {
+            "rank": 3,
+            "title": "Resource Overload Leading to IO Exceptions",
+            "confidence": 0.7
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 2,
+        "wall_ms": 29266,
+        "timings_ms": {
+          "collect": 4485,
+          "correlate": 30,
+          "rank": 24733
+        },
+        "records_collected": 3203,
+        "records_cited": 14,
+        "events_in_store": 103414,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Disk Space Exhaustion",
+            "confidence": 0.9
+          },
+          {
+            "rank": 2,
+            "title": "Write Errors Due to Storage Issues",
+            "confidence": 0.85
+          },
+          {
+            "rank": 3,
+            "title": "Resource Overload and Concurrency Issues",
+            "confidence": 0.75
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 3,
+        "wall_ms": 28109,
+        "timings_ms": {
+          "collect": 4108,
+          "correlate": 47,
+          "rank": 23952
+        },
+        "records_collected": 3203,
+        "records_cited": 13,
+        "events_in_store": 103414,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Disk Space Exhaustion",
+            "confidence": 0.9
+          },
+          {
+            "rank": 2,
+            "title": "Write Errors Due to Full Disk",
+            "confidence": 0.85
+          },
+          {
+            "rank": 3,
+            "title": "Insufficient Disk Space for Ingest Operations",
+            "confidence": 0.8
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 4,
+        "wall_ms": 41094,
+        "timings_ms": {
+          "collect": 4297,
+          "correlate": 30,
+          "rank": 36750
+        },
+        "records_collected": 3203,
+        "records_cited": 13,
+        "events_in_store": 103414,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Disk Space Exhaustion",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Write Operations Overload",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Resource Starvation",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 5,
+        "wall_ms": 41484,
+        "timings_ms": {
+          "collect": 6938,
+          "correlate": 30,
+          "rank": 34514
+        },
+        "records_collected": 3203,
+        "records_cited": 14,
+        "events_in_store": 103414,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Disk Space Exhaustion",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Write Operations Overload",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Resource Starvation",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      }
+    ],
+    "dropped_index": [
+      {
+        "run": 1,
+        "wall_ms": 231328,
+        "timings_ms": {
+          "collect": 5625,
+          "correlate": 63,
+          "rank": 225625
+        },
+        "records_collected": 3593,
+        "records_cited": 9,
+        "events_in_store": 104036,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Query timeout due to increased cache TTL",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Migration dropping index idx_orders_created_at",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Increased load due to cache misses",
+            "confidence": 0.4
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+      },
+      {
+        "run": 2,
+        "wall_ms": 19297,
+        "timings_ms": {
+          "collect": 3641,
+          "correlate": 16,
+          "rank": 15639
+        },
+        "records_collected": 3593,
+        "records_cited": 8,
+        "events_in_store": 104036,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Query Timeout Due to Increased Cache TTL",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Migration Impact on Query Performance",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "New Error Signature Introduction",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Query Timeout Due to Increased Cache TTL'"
+      },
+      {
+        "run": 3,
+        "wall_ms": 15656,
+        "timings_ms": {
+          "collect": 3844,
+          "correlate": 16,
+          "rank": 11795
+        },
+        "records_collected": 3593,
+        "records_cited": 8,
+        "events_in_store": 104036,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Query timeout due to increased cache TTL",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Migration impact on database performance",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Increased load due to new error signatures",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+      },
+      {
+        "run": 4,
+        "wall_ms": 29688,
+        "timings_ms": {
+          "collect": 7922,
+          "correlate": 16,
+          "rank": 21750
+        },
+        "records_collected": 3593,
+        "records_cited": 9,
+        "events_in_store": 104036,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Query timeout due to increased cache TTL",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Migration causing index drop and subsequent query timeouts",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "Increased load due to new deployment",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+      },
+      {
+        "run": 5,
+        "wall_ms": 13609,
+        "timings_ms": {
+          "collect": 3686,
+          "correlate": 16,
+          "rank": 9905
+        },
+        "records_collected": 3593,
+        "records_cited": 8,
+        "events_in_store": 104036,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Query timeout due to increased cache TTL",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Migration dropping index idx_orders_created_at",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Query timeout due to increased cache TTL'"
+      }
+    ],
+    "memory_leak_release": [
+      {
+        "run": 1,
+        "wall_ms": 24641,
+        "timings_ms": {
+          "collect": 3828,
+          "correlate": 15,
+          "rank": 20796
+        },
+        "records_collected": 2460,
+        "records_cited": 13,
+        "events_in_store": 102586,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Heap Memory Exhaustion Due to New Cache Implementation",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Pod Restart Due to JVM Heap Exhaustion",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Resource Contention and GC Pauses",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 2,
+        "wall_ms": 21922,
+        "timings_ms": {
+          "collect": 4203,
+          "correlate": 15,
+          "rank": 17703
+        },
+        "records_collected": 2460,
+        "records_cited": 13,
+        "events_in_store": 102586,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Heap Memory Exhaustion Due to New Cache Implementation",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Resource Contention and GC Pauses",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Pod Restart Due to JVM Heap Exhaustion",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 3,
+        "wall_ms": 35547,
+        "timings_ms": {
+          "collect": 4030,
+          "correlate": 15,
+          "rank": 31500
+        },
+        "records_collected": 2460,
+        "records_cited": 12,
+        "events_in_store": 102586,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Heap Memory Exhaustion Due to New Cache Implementation",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Pod Restart Due to JVM Heap Exhaustion",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Resource Contention Leading to GC Pauses",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 4,
+        "wall_ms": 26828,
+        "timings_ms": {
+          "collect": 5609,
+          "correlate": 15,
+          "rank": 21203
+        },
+        "records_collected": 2460,
+        "records_cited": 12,
+        "events_in_store": 102586,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Heap Memory Exhaustion Due to New Cache Implementation",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Pod Restart Due to JVM Heap Exhaustion",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Resource Contention Leading to GC Pauses",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 5,
+        "wall_ms": 24250,
+        "timings_ms": {
+          "collect": 4296,
+          "correlate": 30,
+          "rank": 19922
+        },
+        "records_collected": 2460,
+        "records_cited": 12,
+        "events_in_store": 102586,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Heap Space Exhaustion Due to New Cache Implementation",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Pod Restart Due to JVM Heap Exhaustion",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Resource Contention and GC Pauses",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      }
+    ],
+    "traffic_surge": [
+      {
+        "run": 1,
+        "wall_ms": 16515,
+        "timings_ms": {
+          "collect": 5000,
+          "correlate": 15,
+          "rank": 11500
+        },
+        "records_collected": 4667,
+        "records_cited": 6,
+        "events_in_store": 105184,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Worker Queue Saturated",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Service Overload for API Requests",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['traffic|load|request rate|requests', 'spike|surge|increase|sudden|flood|grow']"
+      },
+      {
+        "run": 2,
+        "wall_ms": 11204,
+        "timings_ms": {
+          "collect": 4657,
+          "correlate": 30,
+          "rank": 6515
+        },
+        "records_collected": 4667,
+        "records_cited": 6,
+        "events_in_store": 105184,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Worker Queue Saturated",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Service Overload",
+            "confidence": 0.7
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['spike|surge|increase|sudden|flood|grow']"
+      },
+      {
+        "run": 3,
+        "wall_ms": 16031,
+        "timings_ms": {
+          "collect": 4686,
+          "correlate": 30,
+          "rank": 11297
+        },
+        "records_collected": 4667,
+        "records_cited": 6,
+        "events_in_store": 105184,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Worker Queue Saturated",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Service Overload for API Requests",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['traffic|load|request rate|requests', 'spike|surge|increase|sudden|flood|grow']"
+      },
+      {
+        "run": 4,
+        "wall_ms": 15922,
+        "timings_ms": {
+          "collect": 4609,
+          "correlate": 46,
+          "rank": 11266
+        },
+        "records_collected": 4667,
+        "records_cited": 6,
+        "events_in_store": 105184,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Worker Queue Saturated",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Service Overload for API Requests",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Worker Queue Saturated' missing keywords ['traffic|load|request rate|requests', 'spike|surge|increase|sudden|flood|grow']"
+      },
+      {
+        "run": 5,
+        "wall_ms": 14109,
+        "timings_ms": {
+          "collect": 4577,
+          "correlate": 15,
+          "rank": 9515
+        },
+        "records_collected": 550,
+        "records_cited": 3,
+        "events_in_store": 105184,
+        "top1": false,
+        "top3": true,
+        "rank_of_correct": 2,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Service overload due to new error signature",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Increased request rate leading to service overload",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "correct cause ranked #2; #1 was 'Service overload due to new error signature'"
+      }
+    ],
+    "cpu_throttling_metrics_only": [
+      {
+        "run": 1,
+        "wall_ms": 19500,
+        "timings_ms": {
+          "collect": 4436,
+          "correlate": 16,
+          "rank": 15046
+        },
+        "records_collected": 3285,
+        "records_cited": 4,
+        "events_in_store": 103851,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": false,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Cache Misses Causing Timeout",
+            "confidence": 0.6
+          },
+          {
+            "rank": 2,
+            "title": "Backend Service Overload",
+            "confidence": 0.5
+          },
+          {
+            "rank": 3,
+            "title": "Configuration Change Impact",
+            "confidence": 0.4
+          }
+        ],
+        "warnings": [
+          "hypothesis #3 rejected: invalid schema (List should have at least 1 item after validation, not 0)",
+          "hypothesis #5 rejected: invalid schema (List should have at least 1 item after validation, not 0)"
+        ],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Cache Misses Causing Timeout' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+      },
+      {
+        "run": 2,
+        "wall_ms": 12266,
+        "timings_ms": {
+          "collect": 4000,
+          "correlate": 15,
+          "rank": 8234
+        },
+        "records_collected": 3285,
+        "records_cited": 4,
+        "events_in_store": 103851,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": false,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Cache Misses Leading to Timeout",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Increased Load on Recommendation Service",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Cache Misses Leading to Timeout' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+      },
+      {
+        "run": 3,
+        "wall_ms": 13281,
+        "timings_ms": {
+          "collect": 4094,
+          "correlate": 15,
+          "rank": 9171
+        },
+        "records_collected": 3285,
+        "records_cited": 4,
+        "events_in_store": 103851,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": false,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Cache Misses Causing Timeout",
+            "confidence": 0.6
+          },
+          {
+            "rank": 2,
+            "title": "Backend Service Overload",
+            "confidence": 0.4
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Cache Misses Causing Timeout' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+      },
+      {
+        "run": 4,
+        "wall_ms": 11219,
+        "timings_ms": {
+          "collect": 4188,
+          "correlate": 15,
+          "rank": 7015
+        },
+        "records_collected": 3285,
+        "records_cited": 3,
+        "events_in_store": 103851,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": false,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Backend Overload",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Cache Misses Leading to Timeout",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Backend Overload' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+      },
+      {
+        "run": 5,
+        "wall_ms": 11437,
+        "timings_ms": {
+          "collect": 4094,
+          "correlate": 15,
+          "rank": 7327
+        },
+        "records_collected": 3285,
+        "records_cited": 3,
+        "events_in_store": 103851,
+        "top1": false,
+        "top3": false,
+        "rank_of_correct": null,
+        "top1_lenient": false,
+        "top3_lenient": false,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Increased Load on Backend",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Cache Misses Leading to Timeout",
+            "confidence": 0.7
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": "top hypothesis 'Increased Load on Backend' missing keywords ['cpu', 'throttl|limit', 'reduc|lower|decreas|quota|container|cut']"
+      }
+    ],
+    "red_herring_cache": [
+      {
+        "run": 1,
+        "wall_ms": 21203,
+        "timings_ms": {
+          "collect": 4344,
+          "correlate": 15,
+          "rank": 16844
+        },
+        "records_collected": 2983,
+        "records_cited": 8,
+        "events_in_store": 103131,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Redis memory pressure leading to cache misses and timeouts",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Cache eviction due to high redis_evicted_keys_per_min",
+            "confidence": 0.75
+          },
+          {
+            "rank": 3,
+            "title": "Profile API v5.1.0 deployment issues",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 2,
+        "wall_ms": 21750,
+        "timings_ms": {
+          "collect": 3905,
+          "correlate": 0,
+          "rank": 17844
+        },
+        "records_collected": 2983,
+        "records_cited": 6,
+        "events_in_store": 103131,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Redis memory pressure leading to cache misses and timeouts",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Profile API v5.1.0 deployment issue",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "HTTP client keep-alive tuning issue",
+            "confidence": 0.4
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 3,
+        "wall_ms": 21000,
+        "timings_ms": {
+          "collect": 4155,
+          "correlate": 16,
+          "rank": 16827
+        },
+        "records_collected": 2983,
+        "records_cited": 9,
+        "events_in_store": 103131,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Redis memory pressure leading to cache misses and timeouts",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Cache eviction due to deploy changes",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "HTTP client keep-alive tuning causing connection issues",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 4,
+        "wall_ms": 20969,
+        "timings_ms": {
+          "collect": 4186,
+          "correlate": 16,
+          "rank": 16765
+        },
+        "records_collected": 2983,
+        "records_cited": 9,
+        "events_in_store": 103131,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Redis memory pressure leading to cache misses and timeouts",
+            "confidence": 0.8
+          },
+          {
+            "rank": 2,
+            "title": "Cache hit ratio drop due to increased Redis load",
+            "confidence": 0.7
+          },
+          {
+            "rank": 3,
+            "title": "Profile API v5.1.0 deployment issues",
+            "confidence": 0.6
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      },
+      {
+        "run": 5,
+        "wall_ms": 22062,
+        "timings_ms": {
+          "collect": 4717,
+          "correlate": 16,
+          "rank": 17327
+        },
+        "records_collected": 2983,
+        "records_cited": 10,
+        "events_in_store": 103131,
+        "top1": true,
+        "top3": true,
+        "rank_of_correct": 1,
+        "top1_lenient": true,
+        "top3_lenient": true,
+        "top3_titles": [
+          {
+            "rank": 1,
+            "title": "Redis memory pressure due to deploy changes",
+            "confidence": 0.7
+          },
+          {
+            "rank": 2,
+            "title": "Cache eviction and miss due to increased load",
+            "confidence": 0.6
+          },
+          {
+            "rank": 3,
+            "title": "HTTP client keep-alive tuning issue",
+            "confidence": 0.5
+          }
+        ],
+        "warnings": [],
+        "source_failures": {},
+        "truncated_sources": [],
+        "planned_by": {
+          "app-logs": "llm",
+          "deploys": "llm",
+          "metrics": "llm"
+        },
+        "reason": ""
+      }
+    ]
+  }
+}

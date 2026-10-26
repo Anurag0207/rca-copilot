@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NL Data Insight</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body, #root { height: 100%; }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #0a0a0f;
+        color: #e8e8f0;
+        -webkit-font-smoothing: antialiased;
+      }
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #2d2d3e; border-radius: 2px; }
+      @keyframes blink {
+        0%, 100% { opacity: 0.2; transform: translateY(0); }
+        50%       { opacity: 1;   transform: translateY(-3px); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes shimmer {
+        0%   { background-position: 200% center; }
+        100% { background-position: -200% center; }
+      }
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+        50%       { opacity: 0.85; box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+      }
+      @keyframes pulse-dot-query {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0.6); }
+        50%       { box-shadow: 0 0 0 5px rgba(251,191,36,0); }
+      }
+      /* Input focus glow */
+      .pill-input:focus-within {
+        border-color: rgba(124,58,237,0.45) !important;
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.09) !important;
+      }
+      /* Chip hover */
+      .prompt-chip:hover { background: #161625 !important; border-color: rgba(124,58,237,0.3) !important; color: #b0b0d0 !important; }
+      /* Session item hover */
+      .session-item:hover { background: rgba(255,255,255,0.03) !important; }
+      /* Download button hover */
+      .dl-btn:hover { background: rgba(124,58,237,0.08) !important; border-color: rgba(124,58,237,0.3) !important; color: #a78bfa !important; }
+      /* Send button hover */
+      .send-btn:not(:disabled):hover { transform: scale(1.05); }
+      /* Model picker */
+      .picker-trigger:hover { border-color: rgba(124,58,237,0.3) !important; color: #c0c0e0 !important; }
+      .picker-row:hover { background: rgba(124,58,237,0.08) !important; }
+      /* Reasoning trace toggle */
+      .reasoning-toggle:hover { background: rgba(124,58,237,0.08) !important; border-color: rgba(124,58,237,0.3) !important; color: #a78bfa !important; }
+      /* Session more-menu rows (delete / cancel) */
+      .session-menu-row:hover { background: rgba(255,255,255,0.06) !important; }
+      .session-menu-delete:hover { background: rgba(239,68,68,0.22) !important; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

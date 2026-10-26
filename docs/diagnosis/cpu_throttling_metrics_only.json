@@ -1,0 +1,337 @@
+{
+  "scenario": "cpu_throttling_metrics_only",
+  "ground_truth": {
+    "label": "CPU throttling after the container CPU limit was reduced",
+    "keywords": [
+      "cpu",
+      "throttl|limit",
+      "reduc|lower|decreas|quota|container|cut"
+    ],
+    "expected_sources": [
+      "metrics"
+    ]
+  },
+  "planner": {
+    "app-logs": {
+      "fragment": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "service": "recs-api"
+              }
+            }
+          ],
+          "should": [
+            {
+              "match": {
+                "message": "timeout"
+              }
+            }
+          ]
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "deploys": {
+      "fragment": {
+        "collection": "deploy_events",
+        "match": {
+          "service": "recs-api"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "metrics": {
+      "fragment": {
+        "collection": "service_metrics",
+        "match": {
+          "service": "recs-api",
+          "metric": "cpu_usage"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    }
+  },
+  "fetched": {
+    "app-logs": {
+      "records": 3285,
+      "truncated": false,
+      "query_used": "{\"index\": \"rca-eval-cpu-throttling-metrics-only\", \"query\": {\"bool\": {\"filter\": [{\"bool\": {\"filter\": [{\"term\": {\"service\": \"recs-api\"}}], \"should\": [{\"match\": {\"message\": \"timeout\"}}]}}, {\"range\": {\"@timestamp\": {\"gte\": \"2026-03-10T11:00:00+00:00\", \"lte\": \"2026-03-10T12:20:00+00:00\"}}}], \"must_not\": [{\"terms\": {\"level\": [\"DEBUG\", \"INFO\", \"TRACE\", \"debug\", \"info\", \"trace\"]}}]}}, \"sort\": [{\"@timestamp\": {\"order\": \"desc\"}}], \"size\": 10000}"
+    },
+    "deploys": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"deploy_events\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"recs-api\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    },
+    "metrics": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"service_metrics\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"recs-api\", \"metric\": \"cpu_usage\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    }
+  },
+  "failures": {},
+  "correlator": {
+    "baseline_window": {
+      "start": "2026-03-10T11:00:00Z",
+      "end": "2026-03-10T12:00:00Z"
+    },
+    "incident_window": {
+      "start": "2026-03-10T12:00:00Z",
+      "end": "2026-03-10T12:20:00Z"
+    },
+    "zscore_threshold": 3.0,
+    "error_spikes": [
+      {
+        "source": "app-logs",
+        "onset": "2026-03-10T12:08:00Z",
+        "peak_at": "2026-03-10T12:08:00Z",
+        "peak_count": 60,
+        "baseline_mean": 0.05,
+        "baseline_std": 1.0,
+        "peak_zscore": 59.95,
+        "spike_buckets": 12
+      }
+    ],
+    "signatures": [
+      {
+        "signature": "get /recommendations <n> gateway timeout after <n>ms",
+        "incident_count": 720,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:08:00.511095Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#2523",
+          "app-logs#2515",
+          "app-logs#2514"
+        ]
+      },
+      {
+        "signature": "cache miss for session <n>",
+        "incident_count": 1,
+        "baseline_count": 3,
+        "novel": false,
+        "first_seen": "2026-03-10T12:00:16.328120Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#3276"
+        ]
+      }
+    ],
+    "metric_anomalies": [],
+    "timeline": [
+      {
+        "timestamp": "2026-03-10T12:08:00Z",
+        "source": "app-logs",
+        "kind": "error_spike_onset",
+        "description": "error rate spike (peak 60/min, z=59.95, baseline 0.05/min)",
+        "record_ids": [],
+        "offset_seconds": 0.0
+      },
+      {
+        "timestamp": "2026-03-10T12:08:00.511095Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x720: get /recommendations <n> gateway timeout after <n>ms",
+        "record_ids": [
+          "app-logs#2523",
+          "app-logs#2515",
+          "app-logs#2514"
+        ],
+        "offset_seconds": 0.511095
+      }
+    ],
+    "first_anomaly_at": "2026-03-10T12:08:00Z",
+    "activity": {
+      "app-logs": [
+        {
+          "timestamp": "2026-03-10T11:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:12:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:20:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:24:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:36:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:40:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:48:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T12:03:00Z",
+          "total": 150,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 150,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 150,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 150,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 150,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 211,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 210,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 4,
+          "errors": 0
+        }
+      ]
+    }
+  },
+  "ranker_input": "{\n \"incident\": {\n  \"service\": \"recs-api\",\n  \"symptom\": \"recommendation requests are slow and timing out\",\n  \"window\": \"12:00:00 to 12:20:00 UTC\"\n },\n \"first_anomaly_at\": \"12:08:00\",\n \"error_spikes\": [\n  {\n   \"source\": \"app-logs\",\n   \"onset\": \"12:08:00\",\n   \"peak_per_min\": 60,\n   \"baseline_per_min\": 0.05,\n   \"zscore\": 59.95\n  }\n ],\n \"error_signatures\": [\n  {\n   \"signature\": \"get /recommendations <n> gateway timeout after <n>ms\",\n   \"incident_count\": 720,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:08:00\",\n   \"evidence_ids\": [\n    \"app-logs#2523\",\n    \"app-logs#2515\",\n    \"app-logs#2514\"\n   ]\n  },\n  {\n   \"signature\": \"cache miss for session <n>\",\n   \"incident_count\": 1,\n   \"baseline_count\": 3,\n   \"novel\": false,\n   \"first_seen\": \"12:00:16\",\n   \"evidence_ids\": [\n    \"app-logs#3276\"\n   ]\n  }\n ],\n \"metric_anomalies\": [],\n \"timeline\": [\n  {\n   \"time\": \"12:08:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"app-logs\",\n   \"kind\": \"error_spike_onset\",\n   \"what\": \"error rate spike (peak 60/min, z=59.95, baseline 0.05/min)\",\n   \"record_ids\": []\n  },\n  {\n   \"time\": \"12:08:00\",\n   \"offset_seconds\": 0.511095,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x720: get /recommendations <n> gateway timeout after <n>ms\",\n   \"record_ids\": [\n    \"app-logs#2523\",\n    \"app-logs#2515\",\n    \"app-logs#2514\"\n   ]\n  }\n ]\n}",
+  "raw_output": "{\n \"hypotheses\": [\n  {\n   \"title\": \"Cache Misses Causing Timeout\",\n   \"description\": \"The new error signature of cache misses for session <n> and the onset of a high error rate spike suggest that an increase in cache misses might be causing gateway timeouts, leading to slow response times.\",\n   \"confidence\": 0.3,\n   \"supporting_evidence_ids\": [\n    \"app-logs#2523\",\n    \"app-logs#2515\",\n    \"app-logs#2514\",\n    \"app-logs#3276\"\n   ]\n  },\n  {\n   \"title\": \"Increased Load on Recommendation Service\",\n   \"description\": \"The error spike and the new error signature of gateway timeouts for recommendation requests indicate that there might be an increase in load or a service degradation affecting the recommendation API.\",\n   \"confidence\": 0.4,\n   \"supporting_evidence_ids\": [\n    \"app-logs#2523\",\n    \"app-logs#2515\",\n    \"app-logs#2514\"\n   ]\n  },\n  {\n   \"title\": \"Network Latency Issues\",\n   \"description\": \"The timing of the error spike and new error signature suggests that network latency issues might be causing delays in fetching recommendations, leading to timeouts.\",\n   \"confidence\": 0.2,\n   \"supporting_evidence_ids\": [\n    \"app-logs#2523\",\n    \"app-logs#2515\",\n    \"app-logs#2514\"\n   ]\n  }\n ]\n}",
+  "parsed_hypotheses": [
+    {
+      "rank": 1,
+      "title": "Increased Load on Recommendation Service",
+      "description": "The error spike and the new error signature of gateway timeouts for recommendation requests indicate that there might be an increase in load or a service degradation affecting the recommendation API.",
+      "confidence": 0.4,
+      "supporting_evidence_ids": [
+        "app-logs#2523",
+        "app-logs#2515",
+        "app-logs#2514"
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "Cache Misses Causing Timeout",
+      "description": "The new error signature of cache misses for session <n> and the onset of a high error rate spike suggest that an increase in cache misses might be causing gateway timeouts, leading to slow response times.",
+      "confidence": 0.3,
+      "supporting_evidence_ids": [
+        "app-logs#2523",
+        "app-logs#2515",
+        "app-logs#2514",
+        "app-logs#3276"
+      ]
+    },
+    {
+      "rank": 3,
+      "title": "Network Latency Issues",
+      "description": "The timing of the error spike and new error signature suggests that network latency issues might be causing delays in fetching recommendations, leading to timeouts.",
+      "confidence": 0.2,
+      "supporting_evidence_ids": [
+        "app-logs#2523",
+        "app-logs#2515",
+        "app-logs#2514"
+      ]
+    }
+  ],
+  "rank_of_correct": null,
+  "visibility": {
+    "topic_keyword": "cpu",
+    "topic_in_fetched_expected_sources": false,
+    "topic_in_ranker_input": false,
+    "keywords_missing_from_ranker_input": [
+      "cpu",
+      "throttl|limit",
+      "reduc|lower|decreas|quota|container|cut"
+    ]
+  }
+}

@@ -1,0 +1,856 @@
+{
+  "scenario": "cert_expiry",
+  "ground_truth": {
+    "label": "Expired TLS certificate",
+    "keywords": [
+      "certificate",
+      "expir",
+      "tls|x509|handshake"
+    ],
+    "expected_sources": [
+      "app-logs"
+    ]
+  },
+  "planner": {
+    "app-logs": {
+      "fragment": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "service": "auth-api"
+              }
+            }
+          ],
+          "should": [
+            {
+              "match": {
+                "message": "users cannot log in"
+              }
+            }
+          ]
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "deploys": {
+      "fragment": {
+        "collection": "deploy_events",
+        "match": {
+          "service": "auth-api"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "metrics": {
+      "fragment": {
+        "collection": "service_metrics",
+        "match": {
+          "service": "auth-api"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    }
+  },
+  "fetched": {
+    "app-logs": {
+      "records": 5972,
+      "truncated": false,
+      "query_used": "{\"index\": \"rca-eval-cert-expiry\", \"query\": {\"bool\": {\"filter\": [{\"bool\": {\"filter\": [{\"term\": {\"service\": \"auth-api\"}}], \"should\": [{\"match\": {\"message\": \"users cannot log in\"}}]}}, {\"range\": {\"@timestamp\": {\"gte\": \"2026-03-10T11:00:00+00:00\", \"lte\": \"2026-03-10T12:20:00+00:00\"}}}], \"must_not\": [{\"terms\": {\"level\": [\"DEBUG\", \"INFO\", \"TRACE\", \"debug\", \"info\", \"trace\"]}}]}}, \"sort\": [{\"@timestamp\": {\"order\": \"desc\"}}], \"size\": 10000}"
+    },
+    "deploys": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"deploy_events\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"auth-api\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    },
+    "metrics": {
+      "records": 162,
+      "truncated": false,
+      "query_used": "{\"collection\": \"service_metrics\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"auth-api\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    }
+  },
+  "failures": {},
+  "correlator": {
+    "baseline_window": {
+      "start": "2026-03-10T11:00:00Z",
+      "end": "2026-03-10T12:00:00Z"
+    },
+    "incident_window": {
+      "start": "2026-03-10T12:00:00Z",
+      "end": "2026-03-10T12:20:00Z"
+    },
+    "zscore_threshold": 3.0,
+    "error_spikes": [
+      {
+        "source": "app-logs",
+        "onset": "2026-03-10T12:00:00Z",
+        "peak_at": "2026-03-10T12:01:00Z",
+        "peak_count": 300,
+        "baseline_mean": 0.05,
+        "baseline_std": 1.0,
+        "peak_zscore": 299.95,
+        "spike_buckets": 20
+      }
+    ],
+    "signatures": [
+      {
+        "signature": "x<n>: certificate has expired or is not yet valid: current time is after <n>-<n>-<n>t<n>:<n>:<n>z",
+        "incident_count": 3000,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:00:00.028596Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#5963",
+          "app-logs#5961",
+          "app-logs#5959"
+        ]
+      },
+      {
+        "signature": "tls handshake error from <ip>: remote error: tls: bad certificate",
+        "incident_count": 2000,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:00:00.462091Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#5962",
+          "app-logs#5960",
+          "app-logs#5957"
+        ]
+      },
+      {
+        "signature": "login failed: identity provider unreachable",
+        "incident_count": 950,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:01:02.281443Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#5698",
+          "app-logs#5685",
+          "app-logs#5683"
+        ]
+      },
+      {
+        "signature": "cache miss for session <n>",
+        "incident_count": 1,
+        "baseline_count": 3,
+        "novel": false,
+        "first_seen": "2026-03-10T12:00:06.644901Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#5931"
+        ]
+      }
+    ],
+    "metric_anomalies": [
+      {
+        "source": "metrics",
+        "metric": "login_success_rate",
+        "baseline_mean": 99.662,
+        "baseline_std": 4.983,
+        "peak_value": 2.92,
+        "peak_zscore": -19.41,
+        "first_anomalous_at": "2026-03-10T12:00:00Z",
+        "sample_record_ids": [
+          "metrics#41",
+          "metrics#5"
+        ]
+      }
+    ],
+    "timeline": [
+      {
+        "timestamp": "2026-03-10T12:00:00Z",
+        "source": "app-logs",
+        "kind": "error_spike_onset",
+        "description": "error rate spike (peak 300/min, z=299.95, baseline 0.05/min)",
+        "record_ids": [],
+        "offset_seconds": 0.0
+      },
+      {
+        "timestamp": "2026-03-10T12:00:00Z",
+        "source": "metrics",
+        "kind": "metric_anomaly",
+        "description": "login_success_rate anomalous (peak 2.92, baseline 99.662, z=-19.41)",
+        "record_ids": [
+          "metrics#41",
+          "metrics#5"
+        ],
+        "offset_seconds": 0.0
+      },
+      {
+        "timestamp": "2026-03-10T12:00:00.028596Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x3000: x<n>: certificate has expired or is not yet valid: current time is after <n>-<n>-<n>t<n>:<n>:<n>z",
+        "record_ids": [
+          "app-logs#5963",
+          "app-logs#5961",
+          "app-logs#5959"
+        ],
+        "offset_seconds": 0.028596
+      },
+      {
+        "timestamp": "2026-03-10T12:00:00.462091Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x2000: tls handshake error from <ip>: remote error: tls: bad certificate",
+        "record_ids": [
+          "app-logs#5962",
+          "app-logs#5960",
+          "app-logs#5957"
+        ],
+        "offset_seconds": 0.462091
+      },
+      {
+        "timestamp": "2026-03-10T12:01:02.281443Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x950: login failed: identity provider unreachable",
+        "record_ids": [
+          "app-logs#5698",
+          "app-logs#5685",
+          "app-logs#5683"
+        ],
+        "offset_seconds": 62.281443
+      }
+    ],
+    "first_anomaly_at": "2026-03-10T12:00:00Z",
+    "activity": {
+      "metrics": [
+        {
+          "timestamp": "2026-03-10T11:00:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:01:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:02:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:03:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:04:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:05:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:06:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:07:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:08:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:09:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:10:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:11:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:12:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:13:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:14:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:15:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:16:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:17:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:18:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:19:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:20:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:21:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:22:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:23:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:24:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:25:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:26:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:27:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:28:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:29:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:30:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:31:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:32:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:33:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:34:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:35:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:36:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:37:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:38:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:39:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:40:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:41:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:42:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:43:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:44:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:45:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:46:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:47:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:48:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:49:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:50:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:51:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:52:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:53:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:54:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:55:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:56:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:57:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:58:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:59:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:00:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:01:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:02:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:03:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 2,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 2,
+          "errors": 0
+        }
+      ],
+      "app-logs": [
+        {
+          "timestamp": "2026-03-10T11:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:12:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:20:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:24:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:36:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:40:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:48:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:00:00Z",
+          "total": 252,
+          "errors": 251
+        },
+        {
+          "timestamp": "2026-03-10T12:01:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:02:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:03:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 301,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 300,
+          "errors": 300
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 11,
+          "errors": 11
+        }
+      ]
+    }
+  },
+  "ranker_input": "{\n \"incident\": {\n  \"service\": \"auth-api\",\n  \"symptom\": \"users cannot log in\",\n  \"window\": \"12:00:00 to 12:20:00 UTC\"\n },\n \"first_anomaly_at\": \"12:00:00\",\n \"error_spikes\": [\n  {\n   \"source\": \"app-logs\",\n   \"onset\": \"12:00:00\",\n   \"peak_per_min\": 300,\n   \"baseline_per_min\": 0.05,\n   \"zscore\": 299.95\n  }\n ],\n \"error_signatures\": [\n  {\n   \"signature\": \"x<n>: certificate has expired or is not yet valid: current time is after <n>-<n>-<n>t<n>:<n>:<n>z\",\n   \"incident_count\": 3000,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:00:00\",\n   \"evidence_ids\": [\n    \"app-logs#5963\",\n    \"app-logs#5961\",\n    \"app-logs#5959\"\n   ]\n  },\n  {\n   \"signature\": \"tls handshake error from <ip>: remote error: tls: bad certificate\",\n   \"incident_count\": 2000,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:00:00\",\n   \"evidence_ids\": [\n    \"app-logs#5962\",\n    \"app-logs#5960\",\n    \"app-logs#5957\"\n   ]\n  },\n  {\n   \"signature\": \"login failed: identity provider unreachable\",\n   \"incident_count\": 950,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:01:02\",\n   \"evidence_ids\": [\n    \"app-logs#5698\",\n    \"app-logs#5685\",\n    \"app-logs#5683\"\n   ]\n  },\n  {\n   \"signature\": \"cache miss for session <n>\",\n   \"incident_count\": 1,\n   \"baseline_count\": 3,\n   \"novel\": false,\n   \"first_seen\": \"12:00:06\",\n   \"evidence_ids\": [\n    \"app-logs#5931\"\n   ]\n  }\n ],\n \"metric_anomalies\": [\n  {\n   \"source\": \"metrics\",\n   \"metric\": \"login_success_rate\",\n   \"baseline_mean\": 99.662,\n   \"peak\": 2.92,\n   \"zscore\": -19.41,\n   \"first_anomalous_at\": \"12:00:00\",\n   \"evidence_ids\": [\n    \"metrics#41\",\n    \"metrics#5\"\n   ]\n  }\n ],\n \"timeline\": [\n  {\n   \"time\": \"12:00:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"app-logs\",\n   \"kind\": \"error_spike_onset\",\n   \"what\": \"error rate spike (peak 300/min, z=299.95, baseline 0.05/min)\",\n   \"record_ids\": []\n  },\n  {\n   \"time\": \"12:00:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"metrics\",\n   \"kind\": \"metric_anomaly\",\n   \"what\": \"login_success_rate anomalous (peak 2.92, baseline 99.662, z=-19.41)\",\n   \"record_ids\": [\n    \"metrics#41\",\n    \"metrics#5\"\n   ]\n  },\n  {\n   \"time\": \"12:00:00\",\n   \"offset_seconds\": 0.028596,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x3000: x<n>: certificate has expired or is not yet valid: current time is after <n>-<n>-<n>t<n>:<n>:<n>z\",\n   \"record_ids\": [\n    \"app-logs#5963\",\n    \"app-logs#5961\",\n    \"app-logs#5959\"\n   ]\n  },\n  {\n   \"time\": \"12:00:00\",\n   \"offset_seconds\": 0.462091,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x2000: tls handshake error from <ip>: remote error: tls: bad certificate\",\n   \"record_ids\": [\n    \"app-logs#5962\",\n    \"app-logs#5960\",\n    \"app-logs#5957\"\n   ]\n  },\n  {\n   \"time\": \"12:01:02\",\n   \"offset_seconds\": 62.281443,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x950: login failed: identity provider unreachable\",\n   \"record_ids\": [\n    \"app-logs#5698\",\n    \"app-logs#5685\",\n    \"app-logs#5683\"\n   ]\n  }\n ]\n}",
+  "raw_output": "{\n \"hypotheses\": [\n  {\n   \"title\": \"Certificate Expiry Error\",\n   \"description\": \"The spike in error logs and the significant drop in login success rate both started at 12:00:00, coinciding with new error signatures related to certificate expiry. This suggests that a certificate issue caused the authentication failures.\",\n   \"confidence\": 0.8,\n   \"supporting_evidence_ids\": [\n    \"app-logs#5963\",\n    \"app-logs#5961\",\n    \"app-logs#5959\",\n    \"metrics#41\",\n    \"metrics#5\"\n   ]\n  },\n  {\n   \"title\": \"TLS Handshake Failure\",\n   \"description\": \"The TLS handshake errors started at the same time as the certificate expiry errors, indicating that a misconfigured or expired certificate might have caused issues with establishing secure connections.\",\n   \"confidence\": 0.7,\n   \"supporting_evidence_ids\": [\n    \"app-logs#5962\",\n    \"app-logs#5960\",\n    \"app-logs#5957\"\n   ]\n  },\n  {\n   \"title\": \"Identity Provider Unreachable\",\n   \"description\": \"While this error started slightly later, it could be a secondary effect of the initial certificate issues. If the certificate issue caused authentication failures, the identity provider might have been queried less frequently or encountered other issues.\",\n   \"confidence\": 0.6,\n   \"supporting_evidence_ids\": [\n    \"app-logs#5698\",\n    \"app-logs#5685\",\n    \"app-logs#5683\"\n   ]\n  },\n  {\n   \"title\": \"Cache Miss for Sessions\",\n   \"description\": \"The cache miss error, while not as severe, indicates that session data was not being retrieved from the cache. This could be a result of the initial authentication failures due to certificate issues.\",\n   \"confidence\": 0.5,\n   \"supporting_evidence_ids\": [\n    \"app-logs#5931\"\n   ]\n  },\n  {\n   \"title\": \"General Network or Service Outage\",\n   \"description\": \"Given the timing and nature of the errors, it's possible that a broader network or service outage affected multiple components, including certificate validation and identity provider communication.\",\n   \"confidence\": 0.4,\n   \"supporting_evidence_ids\": [\n    \"app-logs#5963\",\n    \"app-logs#5961\",\n    \"app-logs#5959\",\n    \"app-logs#5962\",\n    \"app-logs#5960\",\n    \"app-logs#5957\",\n    \"app-logs#5698\",\n    \"app-logs#5685\",\n    \"app-logs#5683\",\n    \"app-logs#5931\"\n   ]\n  }\n ]\n}",
+  "parsed_hypotheses": [
+    {
+      "rank": 1,
+      "title": "Certificate Expiry Error",
+      "description": "The spike in error logs and the significant drop in login success rate both started at 12:00:00, coinciding with new error signatures related to certificate expiry. This suggests that a certificate issue caused the authentication failures.",
+      "confidence": 0.8,
+      "supporting_evidence_ids": [
+        "app-logs#5963",
+        "app-logs#5961",
+        "app-logs#5959",
+        "metrics#41",
+        "metrics#5"
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "TLS Handshake Failure",
+      "description": "The TLS handshake errors started at the same time as the certificate expiry errors, indicating that a misconfigured or expired certificate might have caused issues with establishing secure connections.",
+      "confidence": 0.7,
+      "supporting_evidence_ids": [
+        "app-logs#5962",
+        "app-logs#5960",
+        "app-logs#5957"
+      ]
+    },
+    {
+      "rank": 3,
+      "title": "Identity Provider Unreachable",
+      "description": "While this error started slightly later, it could be a secondary effect of the initial certificate issues. If the certificate issue caused authentication failures, the identity provider might have been queried less frequently or encountered other issues.",
+      "confidence": 0.6,
+      "supporting_evidence_ids": [
+        "app-logs#5698",
+        "app-logs#5685",
+        "app-logs#5683"
+      ]
+    },
+    {
+      "rank": 4,
+      "title": "Cache Miss for Sessions",
+      "description": "The cache miss error, while not as severe, indicates that session data was not being retrieved from the cache. This could be a result of the initial authentication failures due to certificate issues.",
+      "confidence": 0.5,
+      "supporting_evidence_ids": [
+        "app-logs#5931"
+      ]
+    },
+    {
+      "rank": 5,
+      "title": "General Network or Service Outage",
+      "description": "Given the timing and nature of the errors, it's possible that a broader network or service outage affected multiple components, including certificate validation and identity provider communication.",
+      "confidence": 0.4,
+      "supporting_evidence_ids": [
+        "app-logs#5963",
+        "app-logs#5961",
+        "app-logs#5959",
+        "app-logs#5962",
+        "app-logs#5960",
+        "app-logs#5957",
+        "app-logs#5698",
+        "app-logs#5685",
+        "app-logs#5683",
+        "app-logs#5931"
+      ]
+    }
+  ],
+  "rank_of_correct": 2,
+  "visibility": {
+    "topic_keyword": "certificate",
+    "topic_in_fetched_expected_sources": true,
+    "topic_in_ranker_input": true,
+    "keywords_missing_from_ranker_input": []
+  }
+}

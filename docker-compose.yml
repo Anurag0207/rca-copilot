@@ -1,0 +1,264 @@
+# docker-compose.yml — NL-to-Data Insight Platform
+#
+# Brings up six services in one command:
+#   backend   — FastAPI app (Python 3.11) + mermaid-cli diagram generation
+#   frontend  — React/Vite app served by nginx
+#   db        — PostgreSQL 16 (app metadata only; no query result data)
+#   redis     — Redis 7 (session state + schema cache)
+#   ollama    — Local LLM server (qwen2.5:7b — CPU-compatible)
+#   mongodb   — MongoDB 7 (data warehouse — hosts two databases: Olist
+#               ecommerce dataset + Retail Data Warehouse dataset; see
+#               MONGO_CONNECTIONS below for how the backend picks between them)
+#
+# GPU is NOT required. All inference runs on CPU (qwen2.5:7b is fast enough
+# for PoC use). Diagram generation uses mermaid-cli (Node.js + headless Chromium).
+#
+# First-run setup:
+#   cp .env.example .env
+#   docker compose up --build
+#   # Pre-pull the Ollama model (one-time, ~4.7GB):
+#   docker exec nl_insight_ollama ollama pull qwen2.5:7b
+#
+# If you already have MongoDB running locally with data loaded:
+#   Set MONGODB_URI=mongodb://host.docker.internal:27017 in .env
+#   Remove or disable the mongodb service below
+
+services:
+
+  # ── Ollama (local LLM — CPU-only) ──────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: nl_insight_ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"   # exposed for direct inspection; restrict in production
+    volumes:
+      - ollama_data:/root/.ollama    # model weights cached here (~4.7GB for qwen2.5:7b)
+    environment:
+      OLLAMA_KEEP_ALIVE: "30m"       # keep model loaded between requests
+    # GPU blocks removed — qwen2.5:7b runs on CPU for PoC
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    networks:
+      - insight_net
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Backend (FastAPI + mermaid-cli) ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nl_insight_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Application
+      ENVIRONMENT:              ${ENVIRONMENT:-development}
+      SECRET_KEY:               ${SECRET_KEY}
+      # Database / Cache
+      DATABASE_URL:             postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL:                redis://redis:6379/0
+      # Ollama (local LLM — single model)
+      OLLAMA_BASE_URL:          http://ollama:11434
+      OLLAMA_MODEL:             ${OLLAMA_MODEL:-qwen2.5:7b}
+      OLLAMA_TIMEOUT_SECONDS:   ${OLLAMA_TIMEOUT_SECONDS:-60.0}
+      # MCP / MongoDB (default connector)
+      MCP_CONNECTOR_TYPE:       ${MCP_CONNECTOR_TYPE:-mongodb}
+      MONGODB_URI:              ${MONGODB_URI:-mongodb://mongodb:27017}
+      MONGODB_DATABASE:         ${MONGODB_DATABASE:-ecommerce_db}
+      # Named connections selectable per chat session via connection_id.
+      # Hardcoded (not ${}-substituted) because Compose's interpolation
+      # doesn't balance the nested braces in a JSON default value — override
+      # by editing this line directly if you add a third data source.
+      MONGO_CONNECTIONS:        '{"olist": {"uri": "mongodb://mongodb:27017", "database": "ecommerce_db"}, "retail_wh": {"uri": "mongodb://mongodb:27017", "database": "retail_warehouse_db"}}'
+      # MCP / Hive (only needed when MCP_CONNECTOR_TYPE=hive)
+      HIVE_HOST:                ${HIVE_HOST:-localhost}
+      HIVE_PORT:                ${HIVE_PORT:-10000}
+      HIVE_DATABASE:            ${HIVE_DATABASE:-default}
+      HIVE_AUTH_MECHANISM:      ${HIVE_AUTH_MECHANISM:-PLAIN}
+      HIVE_USERNAME:            ${HIVE_USERNAME:-}
+      HIVE_PASSWORD:            ${HIVE_PASSWORD:-}
+      # RCA Copilot. Hardcoded JSON for the same reason as MONGO_CONNECTIONS above;
+      # add a {"name": "metrics", "type": "hive", ...} entry here once a Hive
+      # cluster is reachable (HIVE_* vars above) — see README.
+      RCA_CONNECTORS:           '[{"name": "app-logs", "type": "elasticsearch"}, {"name": "deploys", "type": "mongodb", "options": {"database": "rca_demo", "collection": "deploy_events"}}]'
+      RCA_CONNECTOR_TIMEOUT_SECONDS: ${RCA_CONNECTOR_TIMEOUT_SECONDS:-60}
+      RCA_BASELINE_MINUTES:     ${RCA_BASELINE_MINUTES:-60}
+      RCA_ZSCORE_THRESHOLD:     ${RCA_ZSCORE_THRESHOLD:-3.0}
+      RCA_MAX_RECORDS_PER_SOURCE: ${RCA_MAX_RECORDS_PER_SOURCE:-2000}
+      ES_URL:                   ${ES_URL:-http://elasticsearch:9200}
+      ES_INDEX:                 ${ES_INDEX:-app-logs-*}
+      ES_USERNAME:              ${ES_USERNAME:-}
+      ES_PASSWORD:              ${ES_PASSWORD:-}
+      ES_API_KEY:               ${ES_API_KEY:-}
+      # Other
+      CORS_ORIGINS:            '["http://localhost:5173","http://localhost:80"]'
+      OUTPUT_TEMP_DIR:          /tmp/nl_insight_outputs
+      SESSION_TTL_SECONDS:      ${SESSION_TTL_SECONDS:-86400}
+      SCHEMA_CACHE_TTL_SECONDS: ${SCHEMA_CACHE_TTL_SECONDS:-300}
+      QUERY_TIMEOUT_SECONDS:    ${QUERY_TIMEOUT_SECONDS:-25}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+    volumes:
+      - output_files:/tmp/nl_insight_outputs
+      # hf_cache volume removed — no HuggingFace Diffusers dependency
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    # GPU removed — no FLUX.1-schnell, no CUDA needed
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    networks:
+      - insight_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Frontend (React + nginx) ────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nl_insight_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - insight_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── MongoDB (data warehouse — hosts both the Olist and retail_wh databases) ─
+  mongodb:
+    image: mongo:7
+    container_name: nl_insight_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"   # exposed so local tools and data-setup scripts can reach it
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d:ro   # runs once on fresh volume
+    networks:
+      - insight_net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ── Elasticsearch (RCA Copilot log source) ──────────────────────────────────
+  # Single node with security DISABLED: local demo only. Enable xpack security
+  # and set ES_USERNAME/ES_PASSWORD (or ES_API_KEY) before pointing at real data.
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
+    container_name: nl_insight_elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"   # exposed so scripts/seed_incident.py can load demo data
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - insight_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: nl_insight_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"   # exposed for local DB tooling; remove in production
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:       ${POSTGRES_DB:-nl_insight}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - insight_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nl_insight_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"   # exposed for local inspection; remove in production
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - insight_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  pg_data:
+    driver: local
+  redis_data:
+    driver: local
+  output_files:
+    driver: local
+  ollama_data:
+    driver: local    # Ollama model weights (~4.7GB for qwen2.5:7b)
+  mongo_data:
+    driver: local    # MongoDB data files (Olist ecommerce dataset)
+  es_data:
+    driver: local    # Elasticsearch indices (RCA demo logs)
+  # hf_cache removed — no HuggingFace Diffusers
+  # hf_cache:
+  #   driver: local
+
+# ── Network ──────────────────────────────────────────────────────────────────
+networks:
+  insight_net:
+    driver: bridge
+    name: nl_insight_network

@@ -1,0 +1,262 @@
+{
+  "scenario": "dependency_outage",
+  "ground_truth": {
+    "label": "inventory-service dependency outage",
+    "keywords": [
+      "inventory",
+      "unavailable|down|outage|refused|unreachable|failure",
+      "dependency|downstream|service"
+    ],
+    "expected_sources": [
+      "app-logs",
+      "metrics"
+    ]
+  },
+  "planner": {
+    "app-logs": {
+      "fragment": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "service": "orders-api"
+              }
+            },
+            {
+              "exists": {
+                "field": "http_status"
+              }
+            }
+          ]
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "deploys": {
+      "fragment": {
+        "collection": "deploy_events",
+        "match": {
+          "service": "orders-api"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "metrics": {
+      "fragment": {
+        "collection": "service_metrics",
+        "match": {
+          "service": "orders-api",
+          "metric": "availability"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    }
+  },
+  "fetched": {
+    "app-logs": {
+      "records": 963,
+      "truncated": false,
+      "query_used": "{\"index\": \"rca-eval-dependency-outage\", \"query\": {\"bool\": {\"filter\": [{\"bool\": {\"filter\": [{\"term\": {\"service\": \"orders-api\"}}, {\"exists\": {\"field\": \"http_status\"}}]}}, {\"range\": {\"@timestamp\": {\"gte\": \"2026-03-10T11:00:00+00:00\", \"lte\": \"2026-03-10T12:20:00+00:00\"}}}], \"must_not\": [{\"terms\": {\"level\": [\"DEBUG\", \"INFO\", \"TRACE\", \"debug\", \"info\", \"trace\"]}}]}}, \"sort\": [{\"@timestamp\": {\"order\": \"desc\"}}], \"size\": 10000}"
+    },
+    "deploys": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"deploy_events\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"orders-api\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    },
+    "metrics": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"service_metrics\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"orders-api\", \"metric\": \"availability\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    }
+  },
+  "failures": {},
+  "correlator": {
+    "baseline_window": {
+      "start": "2026-03-10T11:00:00Z",
+      "end": "2026-03-10T12:00:00Z"
+    },
+    "incident_window": {
+      "start": "2026-03-10T12:00:00Z",
+      "end": "2026-03-10T12:20:00Z"
+    },
+    "zscore_threshold": 3.0,
+    "error_spikes": [
+      {
+        "source": "app-logs",
+        "onset": "2026-03-10T12:04:00Z",
+        "peak_at": "2026-03-10T12:04:00Z",
+        "peak_count": 60,
+        "baseline_mean": 0.0,
+        "baseline_std": 1.0,
+        "peak_zscore": 60.0,
+        "spike_buckets": 16
+      }
+    ],
+    "signatures": [
+      {
+        "signature": "post /orders <n> inventory unavailable (order <n>)",
+        "incident_count": 960,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:04:00.308485Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#962",
+          "app-logs#961",
+          "app-logs#960"
+        ]
+      }
+    ],
+    "metric_anomalies": [],
+    "timeline": [
+      {
+        "timestamp": "2026-03-10T12:04:00Z",
+        "source": "app-logs",
+        "kind": "error_spike_onset",
+        "description": "error rate spike (peak 60/min, z=60.0, baseline 0.0/min)",
+        "record_ids": [],
+        "offset_seconds": 0.0
+      },
+      {
+        "timestamp": "2026-03-10T12:04:00.308485Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x960: post /orders <n> inventory unavailable (order <n>)",
+        "record_ids": [
+          "app-logs#962",
+          "app-logs#961",
+          "app-logs#960"
+        ],
+        "offset_seconds": 0.308485
+      }
+    ],
+    "first_anomaly_at": "2026-03-10T12:04:00Z",
+    "activity": {
+      "app-logs": [
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 60,
+          "errors": 60
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 3,
+          "errors": 3
+        }
+      ]
+    }
+  },
+  "ranker_input": "{\n \"incident\": {\n  \"service\": \"orders-api\",\n  \"symptom\": \"orders cannot be placed; customers see 503 errors\",\n  \"window\": \"12:00:00 to 12:20:00 UTC\"\n },\n \"first_anomaly_at\": \"12:04:00\",\n \"error_spikes\": [\n  {\n   \"source\": \"app-logs\",\n   \"onset\": \"12:04:00\",\n   \"peak_per_min\": 60,\n   \"baseline_per_min\": 0.0,\n   \"zscore\": 60.0\n  }\n ],\n \"error_signatures\": [\n  {\n   \"signature\": \"post /orders <n> inventory unavailable (order <n>)\",\n   \"incident_count\": 960,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:04:00\",\n   \"evidence_ids\": [\n    \"app-logs#962\",\n    \"app-logs#961\",\n    \"app-logs#960\"\n   ]\n  }\n ],\n \"metric_anomalies\": [],\n \"timeline\": [\n  {\n   \"time\": \"12:04:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"app-logs\",\n   \"kind\": \"error_spike_onset\",\n   \"what\": \"error rate spike (peak 60/min, z=60.0, baseline 0.0/min)\",\n   \"record_ids\": []\n  },\n  {\n   \"time\": \"12:04:00\",\n   \"offset_seconds\": 0.308485,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x960: post /orders <n> inventory unavailable (order <n>)\",\n   \"record_ids\": [\n    \"app-logs#962\",\n    \"app-logs#961\",\n    \"app-logs#960\"\n   ]\n  }\n ]\n}",
+  "raw_output": "{\n \"hypotheses\": [\n  {\n   \"title\": \"Inventory service unavailability\",\n   \"description\": \"The new error signature 'post /orders <n> inventory unavailable (order <n>)' indicates that the orders-api is unable to fetch inventory availability from the inventory service, leading to 503 errors.\",\n   \"confidence\": 0.8,\n   \"supporting_evidence_ids\": [\"app-logs#962\", \"app-logs#961\", \"app-logs#960\"]\n  },\n  {\n   \"title\": \"Database connection issues\",\n   \"description\": \"The error spike in the app-logs at the onset of the incident could be due to database connection problems, which might have caused the orders-api to fail when trying to place an order.\",\n   \"confidence\": 0.6,\n   \"supporting_evidence_ids\": [\"app-logs#962\", \"app-logs#961\", \"app-logs#960\"]\n  }\n ]\n}",
+  "parsed_hypotheses": [
+    {
+      "rank": 1,
+      "title": "Inventory service unavailability",
+      "description": "The new error signature 'post /orders <n> inventory unavailable (order <n>)' indicates that the orders-api is unable to fetch inventory availability from the inventory service, leading to 503 errors.",
+      "confidence": 0.8,
+      "supporting_evidence_ids": [
+        "app-logs#962",
+        "app-logs#961",
+        "app-logs#960"
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "Database connection issues",
+      "description": "The error spike in the app-logs at the onset of the incident could be due to database connection problems, which might have caused the orders-api to fail when trying to place an order.",
+      "confidence": 0.6,
+      "supporting_evidence_ids": [
+        "app-logs#962",
+        "app-logs#961",
+        "app-logs#960"
+      ]
+    }
+  ],
+  "rank_of_correct": 1,
+  "visibility": {
+    "topic_keyword": "inventory",
+    "topic_in_fetched_expected_sources": true,
+    "topic_in_ranker_input": true,
+    "keywords_missing_from_ranker_input": []
+  }
+}

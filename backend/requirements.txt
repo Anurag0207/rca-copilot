@@ -1,0 +1,56 @@
+# NL-to-Data Insight Platform — backend dependencies
+# Pin minor versions for reproducibility; allow patch updates
+
+# ── Web framework ──────────────────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9          # required for OAuth2PasswordRequestForm
+
+# ── Settings & validation ─────────────────────────────────────────────────────
+pydantic==2.7.4
+pydantic-settings==2.3.4
+pydantic[email]                  # EmailStr support
+
+# ── Database ──────────────────────────────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.31
+asyncpg==0.29.0                  # async PostgreSQL driver
+
+# ── Redis ──────────────────────────────────────────────────────────────────────
+redis[asyncio]==5.0.7
+
+# ── Local LLM — Ollama (single model via OpenAI-compat API) ───────────────────
+openai>=1.35.0                   # Ollama exposes the OpenAI chat completions API
+
+# ── Auth ──────────────────────────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0  # JWT encode/decode
+passlib[bcrypt]==1.7.4            # password hashing
+bcrypt==4.0.1                     # passlib 1.7.4 is incompatible with bcrypt 5.x
+
+# ── MCP / MongoDB connector ───────────────────────────────────────────────────
+motor>=3.4.0                      # async MongoDB driver (wraps pymongo)
+
+# ── MCP / Hive connector (not installed by default — requires C++ Build Tools on Windows) ──
+# Uncomment these only if you switch MCP_CONNECTOR_TYPE=hive and have a Hive cluster:
+# pyhive==0.7.0
+# thrift==0.20.0
+# sasl==0.3.1
+# thrift-sasl==0.4.3
+
+# ── Output generation ──────────────────────────────────────────────────────────
+matplotlib==3.9.0                 # chart rendering (accurate data charts)
+pandas==2.2.2                     # DataFrame for chart data
+reportlab==4.2.0                  # PDF generation (reportlab Platypus layout)
+python-pptx==1.0.0                # PowerPoint generation
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+structlog==24.2.0
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest==8.2.2
+pytest-asyncio==0.23.7
+httpx==0.27.0                     # async test client for FastAPI
+pytest-mock==3.14.0
+
+# ── RCA Copilot ───────────────────────────────────────────────────────────────
+elasticsearch[async]==8.13.2      # Elasticsearch evidence connector
+# The Hive evidence connector also needs pyhive (see the Hive block above)

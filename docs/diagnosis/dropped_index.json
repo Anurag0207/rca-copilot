@@ -1,0 +1,386 @@
+{
+  "scenario": "dropped_index",
+  "ground_truth": {
+    "label": "Migration dropped a database index",
+    "keywords": [
+      "index",
+      "drop|migration|remov|missing",
+      "slow|query|scan|database|db"
+    ],
+    "expected_sources": [
+      "deploys"
+    ]
+  },
+  "planner": {
+    "app-logs": {
+      "fragment": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "service": "reports-api"
+              }
+            }
+          ],
+          "should": [
+            {
+              "match": {
+                "message": "timeout"
+              }
+            },
+            {
+              "range": {
+                "http_status": {
+                  "gt": 499
+                }
+              }
+            }
+          ]
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "deploys": {
+      "fragment": {
+        "collection": "deploy_events",
+        "match": {
+          "service": "reports-api"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "metrics": {
+      "fragment": {
+        "collection": "service_metrics",
+        "match": {
+          "service": "reports-api",
+          "metric": "response_time"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    }
+  },
+  "fetched": {
+    "app-logs": {
+      "records": 3591,
+      "truncated": false,
+      "query_used": "{\"index\": \"rca-eval-dropped-index\", \"query\": {\"bool\": {\"filter\": [{\"bool\": {\"filter\": [{\"term\": {\"service\": \"reports-api\"}}], \"should\": [{\"match\": {\"message\": \"timeout\"}}, {\"range\": {\"http_status\": {\"gt\": 499}}}]}}, {\"range\": {\"@timestamp\": {\"gte\": \"2026-03-10T11:00:00+00:00\", \"lte\": \"2026-03-10T12:20:00+00:00\"}}}], \"must_not\": [{\"terms\": {\"level\": [\"DEBUG\", \"INFO\", \"TRACE\", \"debug\", \"info\", \"trace\"]}}]}}, \"sort\": [{\"@timestamp\": {\"order\": \"desc\"}}], \"size\": 10000}"
+    },
+    "deploys": {
+      "records": 2,
+      "truncated": false,
+      "query_used": "{\"collection\": \"deploy_events\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"reports-api\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    },
+    "metrics": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"service_metrics\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"reports-api\", \"metric\": \"response_time\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    }
+  },
+  "failures": {},
+  "correlator": {
+    "baseline_window": {
+      "start": "2026-03-10T11:00:00Z",
+      "end": "2026-03-10T12:00:00Z"
+    },
+    "incident_window": {
+      "start": "2026-03-10T12:00:00Z",
+      "end": "2026-03-10T12:20:00Z"
+    },
+    "zscore_threshold": 3.0,
+    "error_spikes": [
+      {
+        "source": "app-logs",
+        "onset": "2026-03-10T12:08:00Z",
+        "peak_at": "2026-03-10T12:09:00Z",
+        "peak_count": 125,
+        "baseline_mean": 0.05,
+        "baseline_std": 1.0,
+        "peak_zscore": 124.95,
+        "spike_buckets": 12
+      }
+    ],
+    "signatures": [
+      {
+        "signature": "query timeout after <n>ms (statement_timeout)",
+        "incident_count": 900,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:08:00.794097Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#2952",
+          "app-logs#2949",
+          "app-logs#2948"
+        ]
+      },
+      {
+        "signature": "get /reports/daily <n> gateway timeout",
+        "incident_count": 550,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:09:00.188873Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#2754",
+          "app-logs#2741",
+          "app-logs#2740"
+        ]
+      },
+      {
+        "signature": "cache miss for session <n>",
+        "incident_count": 1,
+        "baseline_count": 3,
+        "novel": false,
+        "first_seen": "2026-03-10T12:00:21.769927Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#3582"
+        ]
+      }
+    ],
+    "metric_anomalies": [],
+    "timeline": [
+      {
+        "timestamp": "2026-03-10T11:30:00Z",
+        "source": "deploys",
+        "kind": "change",
+        "description": "config_change: reports-api report cache TTL 300s -> 600s",
+        "record_ids": [
+          "deploys#1"
+        ],
+        "offset_seconds": -2280.0
+      },
+      {
+        "timestamp": "2026-03-10T12:02:00Z",
+        "source": "deploys",
+        "kind": "change",
+        "description": "deploy: reports-api v7.8.0 rolled out; migration 0042 drops index idx_orders_created_at on orders",
+        "record_ids": [
+          "deploys#0"
+        ],
+        "offset_seconds": -360.0
+      },
+      {
+        "timestamp": "2026-03-10T12:08:00Z",
+        "source": "app-logs",
+        "kind": "error_spike_onset",
+        "description": "error rate spike (peak 125/min, z=124.95, baseline 0.05/min)",
+        "record_ids": [],
+        "offset_seconds": 0.0
+      },
+      {
+        "timestamp": "2026-03-10T12:08:00.794097Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x900: query timeout after <n>ms (statement_timeout)",
+        "record_ids": [
+          "app-logs#2952",
+          "app-logs#2949",
+          "app-logs#2948"
+        ],
+        "offset_seconds": 0.794097
+      },
+      {
+        "timestamp": "2026-03-10T12:09:00.188873Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x550: get /reports/daily <n> gateway timeout",
+        "record_ids": [
+          "app-logs#2754",
+          "app-logs#2741",
+          "app-logs#2740"
+        ],
+        "offset_seconds": 60.188873
+      }
+    ],
+    "first_anomaly_at": "2026-03-10T12:08:00Z",
+    "activity": {
+      "app-logs": [
+        {
+          "timestamp": "2026-03-10T11:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:12:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:20:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:24:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:36:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:40:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:48:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T12:03:00Z",
+          "total": 125,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 125,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 125,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 125,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 125,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 200,
+          "errors": 75
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 251,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 250,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 5,
+          "errors": 3
+        }
+      ],
+      "deploys": [
+        {
+          "timestamp": "2026-03-10T11:30:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:02:00Z",
+          "total": 1,
+          "errors": 0
+        }
+      ]
+    }
+  },
+  "ranker_input": "{\n \"incident\": {\n  \"service\": \"reports-api\",\n  \"symptom\": \"daily reports time out with 504 errors\",\n  \"window\": \"12:00:00 to 12:20:00 UTC\"\n },\n \"first_anomaly_at\": \"12:08:00\",\n \"error_spikes\": [\n  {\n   \"source\": \"app-logs\",\n   \"onset\": \"12:08:00\",\n   \"peak_per_min\": 125,\n   \"baseline_per_min\": 0.05,\n   \"zscore\": 124.95\n  }\n ],\n \"error_signatures\": [\n  {\n   \"signature\": \"query timeout after <n>ms (statement_timeout)\",\n   \"incident_count\": 900,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:08:00\",\n   \"evidence_ids\": [\n    \"app-logs#2952\",\n    \"app-logs#2949\",\n    \"app-logs#2948\"\n   ]\n  },\n  {\n   \"signature\": \"get /reports/daily <n> gateway timeout\",\n   \"incident_count\": 550,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:09:00\",\n   \"evidence_ids\": [\n    \"app-logs#2754\",\n    \"app-logs#2741\",\n    \"app-logs#2740\"\n   ]\n  },\n  {\n   \"signature\": \"cache miss for session <n>\",\n   \"incident_count\": 1,\n   \"baseline_count\": 3,\n   \"novel\": false,\n   \"first_seen\": \"12:00:21\",\n   \"evidence_ids\": [\n    \"app-logs#3582\"\n   ]\n  }\n ],\n \"metric_anomalies\": [],\n \"timeline\": [\n  {\n   \"time\": \"11:30:00\",\n   \"offset_seconds\": -2280.0,\n   \"source\": \"deploys\",\n   \"kind\": \"change\",\n   \"what\": \"config_change: reports-api report cache TTL 300s -> 600s\",\n   \"record_ids\": [\n    \"deploys#1\"\n   ]\n  },\n  {\n   \"time\": \"12:02:00\",\n   \"offset_seconds\": -360.0,\n   \"source\": \"deploys\",\n   \"kind\": \"change\",\n   \"what\": \"deploy: reports-api v7.8.0 rolled out; migration 0042 drops index idx_orders_created_at on orders\",\n   \"record_ids\": [\n    \"deploys#0\"\n   ]\n  },\n  {\n   \"time\": \"12:08:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"app-logs\",\n   \"kind\": \"error_spike_onset\",\n   \"what\": \"error rate spike (peak 125/min, z=124.95, baseline 0.05/min)\",\n   \"record_ids\": []\n  },\n  {\n   \"time\": \"12:08:00\",\n   \"offset_seconds\": 0.794097,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x900: query timeout after <n>ms (statement_timeout)\",\n   \"record_ids\": [\n    \"app-logs#2952\",\n    \"app-logs#2949\",\n    \"app-logs#2948\"\n   ]\n  },\n  {\n   \"time\": \"12:09:00\",\n   \"offset_seconds\": 60.188873,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x550: get /reports/daily <n> gateway timeout\",\n   \"record_ids\": [\n    \"app-logs#2754\",\n    \"app-logs#2741\",\n    \"app-logs#2740\"\n   ]\n  }\n ]\n}",
+  "raw_output": "{\n \"hypotheses\": [\n  {\n   \"title\": \"Query timeout due to increased cache TTL\",\n   \"description\": \"The increase in the report cache TTL from 300s to 600s (record_ids: deploys#1) at 11:30 UTC may have led to stale data being served, causing query timeouts as seen by the new error signature x900 (evidence_ids: app-logs#2952, app-logs#2949, app-logs#2948).\",\n   \"confidence\": 0.7,\n   \"supporting_evidence_ids\": [\n    \"app-logs#2952\",\n    \"app-logs#2949\",\n    \"app-logs#2948\"\n   ]\n  },\n  {\n   \"title\": \"Migration dropping index idx_orders_created_at\",\n   \"description\": \"The migration 0042 that dropped the index idx_orders_created_at on orders (record_ids: deploys#0) at 12:02 UTC may have caused performance degradation, leading to query timeouts and gateway timeouts as seen by the new error signatures x900 and x550 (evidence_ids: app-logs#2952, app-logs#2754).\",\n   \"confidence\": 0.6,\n   \"supporting_evidence_ids\": [\n    \"app-logs#2952\",\n    \"app-logs#2754\"\n   ]\n  }\n ]\n}",
+  "parsed_hypotheses": [
+    {
+      "rank": 1,
+      "title": "Query timeout due to increased cache TTL",
+      "description": "The increase in the report cache TTL from 300s to 600s (record_ids: deploys#1) at 11:30 UTC may have led to stale data being served, causing query timeouts as seen by the new error signature x900 (evidence_ids: app-logs#2952, app-logs#2949, app-logs#2948).",
+      "confidence": 0.7,
+      "supporting_evidence_ids": [
+        "app-logs#2952",
+        "app-logs#2949",
+        "app-logs#2948"
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "Migration dropping index idx_orders_created_at",
+      "description": "The migration 0042 that dropped the index idx_orders_created_at on orders (record_ids: deploys#0) at 12:02 UTC may have caused performance degradation, leading to query timeouts and gateway timeouts as seen by the new error signatures x900 and x550 (evidence_ids: app-logs#2952, app-logs#2754).",
+      "confidence": 0.6,
+      "supporting_evidence_ids": [
+        "app-logs#2952",
+        "app-logs#2754"
+      ]
+    }
+  ],
+  "rank_of_correct": null,
+  "visibility": {
+    "topic_keyword": "index",
+    "topic_in_fetched_expected_sources": true,
+    "topic_in_ranker_input": true,
+    "keywords_missing_from_ranker_input": []
+  }
+}

@@ -1,0 +1,363 @@
+{
+  "scenario": "traffic_surge",
+  "ground_truth": {
+    "label": "Traffic surge saturating gateway capacity",
+    "keywords": [
+      "traffic|load|request rate|requests",
+      "spike|surge|increase|sudden|flood|grow",
+      "cpu|saturat|capacity|overload"
+    ],
+    "expected_sources": [
+      "metrics",
+      "app-logs"
+    ]
+  },
+  "planner": {
+    "app-logs": {
+      "fragment": {
+        "bool": {
+          "filter": [
+            {
+              "term": {
+                "service": "gateway-api"
+              }
+            }
+          ],
+          "should": [
+            {
+              "match": {
+                "http_status": 429
+              }
+            },
+            {
+              "match": {
+                "http_status": 503
+              }
+            }
+          ]
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "deploys": {
+      "fragment": {
+        "collection": "deploy_events",
+        "match": {
+          "service": "gateway-api"
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    },
+    "metrics": {
+      "fragment": {
+        "collection": "service_metrics",
+        "match": {
+          "service": "gateway-api",
+          "metric": {
+            "$in": [
+              "request_rejections",
+              "error_rate"
+            ]
+          }
+        }
+      },
+      "planned_by": "llm",
+      "note": ""
+    }
+  },
+  "fetched": {
+    "app-logs": {
+      "records": 4667,
+      "truncated": false,
+      "query_used": "{\"index\": \"rca-eval-traffic-surge\", \"query\": {\"bool\": {\"filter\": [{\"bool\": {\"filter\": [{\"term\": {\"service\": \"gateway-api\"}}], \"should\": [{\"match\": {\"http_status\": 429}}, {\"match\": {\"http_status\": 503}}]}}, {\"range\": {\"@timestamp\": {\"gte\": \"2026-03-10T11:00:00+00:00\", \"lte\": \"2026-03-10T12:20:00+00:00\"}}}], \"must_not\": [{\"terms\": {\"level\": [\"DEBUG\", \"INFO\", \"TRACE\", \"debug\", \"info\", \"trace\"]}}]}}, \"sort\": [{\"@timestamp\": {\"order\": \"desc\"}}], \"size\": 10000}"
+    },
+    "deploys": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"deploy_events\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"gateway-api\"}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    },
+    "metrics": {
+      "records": 0,
+      "truncated": false,
+      "query_used": "{\"collection\": \"service_metrics\", \"pipeline\": [{\"$match\": {\"$and\": [{\"service\": \"gateway-api\", \"metric\": {\"$in\": [\"request_rejections\", \"error_rate\"]}}, {\"timestamp\": {\"$gte\": \"2026-03-10 11:00:00+00:00\", \"$lte\": \"2026-03-10 12:20:00+00:00\"}}]}}, {\"$sort\": {\"timestamp\": -1}}, {\"$limit\": 10001}]}"
+    }
+  },
+  "failures": {},
+  "correlator": {
+    "baseline_window": {
+      "start": "2026-03-10T11:00:00Z",
+      "end": "2026-03-10T12:00:00Z"
+    },
+    "incident_window": {
+      "start": "2026-03-10T12:00:00Z",
+      "end": "2026-03-10T12:20:00Z"
+    },
+    "zscore_threshold": 3.0,
+    "error_spikes": [
+      {
+        "source": "app-logs",
+        "onset": "2026-03-10T12:08:00Z",
+        "peak_at": "2026-03-10T12:09:00Z",
+        "peak_count": 125,
+        "baseline_mean": 0.05,
+        "baseline_std": 1.0,
+        "peak_zscore": 124.95,
+        "spike_buckets": 12
+      }
+    ],
+    "signatures": [
+      {
+        "signature": "upstream request timed out: worker queue saturated",
+        "incident_count": 900,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:08:00.058291Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#3856",
+          "app-logs#3848",
+          "app-logs#3845"
+        ]
+      },
+      {
+        "signature": "get /api/v<n>/items <n> service overloaded",
+        "incident_count": 550,
+        "baseline_count": 0,
+        "novel": true,
+        "first_seen": "2026-03-10T12:09:00.783556Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#3577",
+          "app-logs#3576",
+          "app-logs#3552"
+        ]
+      },
+      {
+        "signature": "cache miss for session <n>",
+        "incident_count": 1,
+        "baseline_count": 3,
+        "novel": false,
+        "first_seen": "2026-03-10T12:00:24.576107Z",
+        "sources": [
+          "app-logs"
+        ],
+        "sample_record_ids": [
+          "app-logs#4658"
+        ]
+      }
+    ],
+    "metric_anomalies": [],
+    "timeline": [
+      {
+        "timestamp": "2026-03-10T12:08:00Z",
+        "source": "app-logs",
+        "kind": "error_spike_onset",
+        "description": "error rate spike (peak 125/min, z=124.95, baseline 0.05/min)",
+        "record_ids": [],
+        "offset_seconds": 0.0
+      },
+      {
+        "timestamp": "2026-03-10T12:08:00.058291Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x900: upstream request timed out: worker queue saturated",
+        "record_ids": [
+          "app-logs#3856",
+          "app-logs#3848",
+          "app-logs#3845"
+        ],
+        "offset_seconds": 0.058291
+      },
+      {
+        "timestamp": "2026-03-10T12:09:00.783556Z",
+        "source": "app-logs",
+        "kind": "new_error_signature",
+        "description": "new error x550: get /api/v<n>/items <n> service overloaded",
+        "record_ids": [
+          "app-logs#3577",
+          "app-logs#3576",
+          "app-logs#3552"
+        ],
+        "offset_seconds": 60.783556
+      }
+    ],
+    "first_anomaly_at": "2026-03-10T12:08:00Z",
+    "activity": {
+      "app-logs": [
+        {
+          "timestamp": "2026-03-10T11:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:12:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:20:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:24:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:36:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T11:40:00Z",
+          "total": 1,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T11:48:00Z",
+          "total": 1,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:00:00Z",
+          "total": 2,
+          "errors": 1
+        },
+        {
+          "timestamp": "2026-03-10T12:04:00Z",
+          "total": 200,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:05:00Z",
+          "total": 200,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:06:00Z",
+          "total": 200,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:07:00Z",
+          "total": 200,
+          "errors": 0
+        },
+        {
+          "timestamp": "2026-03-10T12:08:00Z",
+          "total": 275,
+          "errors": 75
+        },
+        {
+          "timestamp": "2026-03-10T12:09:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:10:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:11:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:12:00Z",
+          "total": 326,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:13:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:14:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:15:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:16:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:17:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:18:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:19:00Z",
+          "total": 325,
+          "errors": 125
+        },
+        {
+          "timestamp": "2026-03-10T12:20:00Z",
+          "total": 6,
+          "errors": 0
+        }
+      ]
+    }
+  },
+  "ranker_input": "{\n \"incident\": {\n  \"service\": \"gateway-api\",\n  \"symptom\": \"gateway is rejecting requests with 429 and 503 errors\",\n  \"window\": \"12:00:00 to 12:20:00 UTC\"\n },\n \"first_anomaly_at\": \"12:08:00\",\n \"error_spikes\": [\n  {\n   \"source\": \"app-logs\",\n   \"onset\": \"12:08:00\",\n   \"peak_per_min\": 125,\n   \"baseline_per_min\": 0.05,\n   \"zscore\": 124.95\n  }\n ],\n \"error_signatures\": [\n  {\n   \"signature\": \"upstream request timed out: worker queue saturated\",\n   \"incident_count\": 900,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:08:00\",\n   \"evidence_ids\": [\n    \"app-logs#3856\",\n    \"app-logs#3848\",\n    \"app-logs#3845\"\n   ]\n  },\n  {\n   \"signature\": \"get /api/v<n>/items <n> service overloaded\",\n   \"incident_count\": 550,\n   \"baseline_count\": 0,\n   \"novel\": true,\n   \"first_seen\": \"12:09:00\",\n   \"evidence_ids\": [\n    \"app-logs#3577\",\n    \"app-logs#3576\",\n    \"app-logs#3552\"\n   ]\n  },\n  {\n   \"signature\": \"cache miss for session <n>\",\n   \"incident_count\": 1,\n   \"baseline_count\": 3,\n   \"novel\": false,\n   \"first_seen\": \"12:00:24\",\n   \"evidence_ids\": [\n    \"app-logs#4658\"\n   ]\n  }\n ],\n \"metric_anomalies\": [],\n \"timeline\": [\n  {\n   \"time\": \"12:08:00\",\n   \"offset_seconds\": 0.0,\n   \"source\": \"app-logs\",\n   \"kind\": \"error_spike_onset\",\n   \"what\": \"error rate spike (peak 125/min, z=124.95, baseline 0.05/min)\",\n   \"record_ids\": []\n  },\n  {\n   \"time\": \"12:08:00\",\n   \"offset_seconds\": 0.058291,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x900: upstream request timed out: worker queue saturated\",\n   \"record_ids\": [\n    \"app-logs#3856\",\n    \"app-logs#3848\",\n    \"app-logs#3845\"\n   ]\n  },\n  {\n   \"time\": \"12:09:00\",\n   \"offset_seconds\": 60.783556,\n   \"source\": \"app-logs\",\n   \"kind\": \"new_error_signature\",\n   \"what\": \"new error x550: get /api/v<n>/items <n> service overloaded\",\n   \"record_ids\": [\n    \"app-logs#3577\",\n    \"app-logs#3576\",\n    \"app-logs#3552\"\n   ]\n  }\n ]\n}",
+  "raw_output": "{\n \"hypotheses\": [\n  {\n   \"title\": \"Worker Queue Saturated\",\n   \"description\": \"The new error signature 'upstream request timed out: worker queue saturated' indicates that the worker queue was overwhelmed, leading to increased latency and eventually service overload.\",\n   \"confidence\": 0.8,\n   \"supporting_evidence_ids\": [\n    \"app-logs#3856\",\n    \"app-logs#3848\",\n    \"app-logs#3845\"\n   ]\n  },\n  {\n   \"title\": \"Service Overload Due to API Requests\",\n   \"description\": \"The new error signature 'get /api/v<n>/items <n> service overloaded' suggests that a specific API endpoint was overwhelmed, contributing to the overall service degradation.\",\n   \"confidence\": 0.6,\n   \"supporting_evidence_ids\": [\n    \"app-logs#3577\",\n    \"app-logs#3576\",\n    \"app-logs#3552\"\n   ]\n  },\n  {\n   \"title\": \"Cache Misses Leading to Increased Load\",\n   \"description\": \"The cache miss error 'cache miss for session <n>' indicates that the system was frequently unable to serve cached content, potentially leading to increased load on backend services.\",\n   \"confidence\": 0.4,\n   \"supporting_evidence_ids\": [\n    \"app-logs#4658\"\n   ]\n  }\n ]\n}",
+  "parsed_hypotheses": [
+    {
+      "rank": 1,
+      "title": "Worker Queue Saturated",
+      "description": "The new error signature 'upstream request timed out: worker queue saturated' indicates that the worker queue was overwhelmed, leading to increased latency and eventually service overload.",
+      "confidence": 0.8,
+      "supporting_evidence_ids": [
+        "app-logs#3856",
+        "app-logs#3848",
+        "app-logs#3845"
+      ]
+    },
+    {
+      "rank": 2,
+      "title": "Service Overload Due to API Requests",
+      "description": "The new error signature 'get /api/v<n>/items <n> service overloaded' suggests that a specific API endpoint was overwhelmed, contributing to the overall service degradation.",
+      "confidence": 0.6,
+      "supporting_evidence_ids": [
+        "app-logs#3577",
+        "app-logs#3576",
+        "app-logs#3552"
+      ]
+    },
+    {
+      "rank": 3,
+      "title": "Cache Misses Leading to Increased Load",
+      "description": "The cache miss error 'cache miss for session <n>' indicates that the system was frequently unable to serve cached content, potentially leading to increased load on backend services.",
+      "confidence": 0.4,
+      "supporting_evidence_ids": [
+        "app-logs#4658"
+      ]
+    }
+  ],
+  "rank_of_correct": 1,
+  "visibility": {
+    "topic_keyword": "traffic|load|request rate|requests",
+    "topic_in_fetched_expected_sources": true,
+    "topic_in_ranker_input": true,
+    "keywords_missing_from_ranker_input": []
+  }
+}
